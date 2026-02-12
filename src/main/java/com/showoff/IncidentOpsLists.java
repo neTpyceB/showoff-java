@@ -1,6 +1,7 @@
 package com.showoff;
 
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 
 public final class IncidentOpsLists {
@@ -50,14 +51,58 @@ public final class IncidentOpsLists {
         return List.copyOf(runbookSteps);
     }
 
+    public static List<String> sortedUniqueRunbookSteps(List<String> runbookSteps) {
+        if (runbookSteps == null) {
+            throw new IllegalArgumentException("runbookSteps must not be null");
+        }
+        LinkedHashSet<String> unique = new LinkedHashSet<>(runbookSteps.size());
+        for (String step : runbookSteps) {
+            validateNonBlank(step, "runbookStep");
+            unique.add(step);
+        }
+        List<String> sorted = new ArrayList<>(unique);
+        sorted.sort(String::compareTo);
+        return sorted;
+    }
+
+    public static void sortIncidentSeveritiesDescending(List<Integer> severities) {
+        if (severities == null) {
+            throw new IllegalArgumentException("severities must not be null");
+        }
+        for (Integer severity : severities) {
+            if (severity == null) {
+                throw new IllegalArgumentException("severities must not contain null");
+            }
+        }
+        severities.sort((a, b) -> Integer.compare(b, a));
+    }
+
+    public static List<String> firstResponderWindow(List<String> escalationChain, int windowSize) {
+        if (escalationChain == null) {
+            throw new IllegalArgumentException("escalationChain must not be null");
+        }
+        if (windowSize <= 0) {
+            throw new IllegalArgumentException("windowSize must be > 0");
+        }
+        for (String team : escalationChain) {
+            validateNonBlank(team, "team");
+        }
+        int end = Math.min(windowSize, escalationChain.size());
+        return new ArrayList<>(escalationChain.subList(0, end));
+    }
+
     private static void appendIfMissing(List<String> target, List<String> source) {
         for (String item : source) {
-            if (item == null || item.isBlank()) {
-                throw new IllegalArgumentException("owner id must be non-blank");
-            }
+            validateNonBlank(item, "ownerId");
             if (!target.contains(item)) {
                 target.add(item);
             }
+        }
+    }
+
+    private static void validateNonBlank(String value, String fieldName) {
+        if (value == null || value.isBlank()) {
+            throw new IllegalArgumentException(fieldName + " must be non-blank");
         }
     }
 }

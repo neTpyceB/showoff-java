@@ -98,4 +98,80 @@ class IncidentOpsListsTest {
             }
         );
     }
+
+    @Test
+    void sortedUniqueRunbookSteps_deduplicatesAndSorts() {
+        List<String> sorted = IncidentOpsLists.sortedUniqueRunbookSteps(
+            List.of("triage", "detect", "mitigate", "detect")
+        );
+
+        assertIterableEquals(List.of("detect", "mitigate", "triage"), sorted);
+    }
+
+    @Test
+    void sortedUniqueRunbookSteps_validatesInput() {
+        assertThrows(IllegalArgumentException.class, () -> IncidentOpsLists.sortedUniqueRunbookSteps(null));
+        assertThrows(
+            IllegalArgumentException.class,
+            () -> IncidentOpsLists.sortedUniqueRunbookSteps(new ArrayList<>(List.of("detect", " ")))
+        );
+        assertThrows(
+            IllegalArgumentException.class,
+            () -> {
+                List<String> steps = new ArrayList<>(List.of("detect"));
+                steps.add(null);
+                IncidentOpsLists.sortedUniqueRunbookSteps(steps);
+            }
+        );
+    }
+
+    @Test
+    void sortIncidentSeveritiesDescending_andFirstResponderWindow_coverSortingAndSlicing() {
+        List<Integer> severities = new ArrayList<>(List.of(2, 5, 1, 5, 3));
+        IncidentOpsLists.sortIncidentSeveritiesDescending(severities);
+        assertIterableEquals(List.of(5, 5, 3, 2, 1), severities);
+
+        assertIterableEquals(
+            List.of("on-call-engineer", "service-owner"),
+            IncidentOpsLists.firstResponderWindow(
+                List.of("on-call-engineer", "service-owner", "incident-commander"),
+                2
+            )
+        );
+        assertIterableEquals(
+            List.of("on-call-engineer", "service-owner"),
+            IncidentOpsLists.firstResponderWindow(List.of("on-call-engineer", "service-owner"), 5)
+        );
+    }
+
+    @Test
+    void sortIncidentSeveritiesDescending_andFirstResponderWindow_validateInput() {
+        assertThrows(IllegalArgumentException.class, () -> IncidentOpsLists.sortIncidentSeveritiesDescending(null));
+        assertThrows(
+            IllegalArgumentException.class,
+            () -> {
+                List<Integer> severities = new ArrayList<>(List.of(3, 1));
+                severities.add(1, null);
+                IncidentOpsLists.sortIncidentSeveritiesDescending(severities);
+            }
+        );
+
+        assertThrows(IllegalArgumentException.class, () -> IncidentOpsLists.firstResponderWindow(null, 1));
+        assertThrows(
+            IllegalArgumentException.class,
+            () -> IncidentOpsLists.firstResponderWindow(List.of("on-call-engineer"), 0)
+        );
+        assertThrows(
+            IllegalArgumentException.class,
+            () -> IncidentOpsLists.firstResponderWindow(new ArrayList<>(List.of("on-call-engineer", " ")), 1)
+        );
+        assertThrows(
+            IllegalArgumentException.class,
+            () -> {
+                List<String> chain = new ArrayList<>(List.of("on-call-engineer"));
+                chain.add(null);
+                IncidentOpsLists.firstResponderWindow(chain, 1);
+            }
+        );
+    }
 }
