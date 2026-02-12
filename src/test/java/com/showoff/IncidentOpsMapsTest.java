@@ -341,4 +341,54 @@ class IncidentOpsMapsTest {
             () -> IncidentOpsMaps.removeServiceRouting(new LinkedHashMap<>(), " ")
         );
     }
+
+    @Test
+    void routingAuditLines_sortsAndFormatsUsingStreamChain() {
+        Map<String, String> routing = new LinkedHashMap<>();
+        routing.put("search-api", "#search");
+        routing.put("identity-api", "#identity");
+        routing.put("payments-api", "#payments");
+
+        assertIterableEquals(
+            List.of("identity-api=#identity", "payments-api=#payments", "search-api=#search"),
+            IncidentOpsMaps.routingAuditLines(routing)
+        );
+        assertIterableEquals(List.of(), IncidentOpsMaps.routingAuditLines(new LinkedHashMap<>()));
+    }
+
+    @Test
+    void routingAuditLines_validatesInputAndEntries() {
+        assertThrows(IllegalArgumentException.class, () -> IncidentOpsMaps.routingAuditLines(null));
+
+        Map<String, String> withBlankKey = new LinkedHashMap<>();
+        withBlankKey.put(" ", "#payments");
+        assertThrows(IllegalArgumentException.class, () -> IncidentOpsMaps.routingAuditLines(withBlankKey));
+
+        Map<String, String> withBlankValue = new LinkedHashMap<>();
+        withBlankValue.put("payments-api", " ");
+        assertThrows(IllegalArgumentException.class, () -> IncidentOpsMaps.routingAuditLines(withBlankValue));
+    }
+
+    @Test
+    void ownerServiceCounts_normalizesAndCountsOwners() {
+        Map<String, String> owners = new LinkedHashMap<>();
+        owners.put("payments-api", "Team-A");
+        owners.put("identity-api", " team-a ");
+        owners.put("search-api", "Team-B");
+
+        assertEquals(
+            Map.of("team-a", 2L, "team-b", 1L),
+            IncidentOpsMaps.ownerServiceCounts(owners)
+        );
+        assertEquals(Map.of(), IncidentOpsMaps.ownerServiceCounts(new LinkedHashMap<>()));
+    }
+
+    @Test
+    void ownerServiceCounts_validatesInputAndEntries() {
+        assertThrows(IllegalArgumentException.class, () -> IncidentOpsMaps.ownerServiceCounts(null));
+
+        Map<String, String> withBlankOwner = new LinkedHashMap<>();
+        withBlankOwner.put("payments-api", " ");
+        assertThrows(IllegalArgumentException.class, () -> IncidentOpsMaps.ownerServiceCounts(withBlankOwner));
+    }
 }

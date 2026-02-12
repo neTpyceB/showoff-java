@@ -165,4 +165,29 @@ class IncidentOpsSetsTest {
             () -> IncidentOpsSets.unresolvedSuppressionCodes(Set.of("DEPLOYMENT_IN_PROGRESS"), invalidOverrides)
         );
     }
+
+    @Test
+    void normalizedRegionsByPrefix_filtersNormalizesAndSorts() {
+        Set<String> regions = new LinkedHashSet<>(List.of("EU-WEST-1", " us-east-1 ", "eu-central-1", "ap-south-1"));
+        assertIterableEquals(
+            List.of("eu-central-1", "eu-west-1"),
+            new ArrayList<>(IncidentOpsSets.normalizedRegionsByPrefix(regions, " eu-"))
+        );
+    }
+
+    @Test
+    void normalizedRegionsByPrefix_validatesInput() {
+        assertThrows(IllegalArgumentException.class, () -> IncidentOpsSets.normalizedRegionsByPrefix(null, "eu-"));
+        assertThrows(
+            IllegalArgumentException.class,
+            () -> IncidentOpsSets.normalizedRegionsByPrefix(Set.of("eu-west-1"), " ")
+        );
+
+        Set<String> withBlank = new LinkedHashSet<>(List.of("eu-west-1"));
+        withBlank.add(" ");
+        assertThrows(
+            IllegalArgumentException.class,
+            () -> IncidentOpsSets.normalizedRegionsByPrefix(withBlank, "eu-")
+        );
+    }
 }
