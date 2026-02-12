@@ -1,6 +1,7 @@
 package com.showoff;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -199,6 +200,35 @@ public final class IncidentOpsMaps {
             ));
     }
 
+    public static Map<String, Integer> parseBurnByService(Map<String, String> rawBurnByService) {
+        if (rawBurnByService == null) {
+            throw new IllegalArgumentException("rawBurnByService must not be null");
+        }
+        validateEntries(rawBurnByService, "serviceId", "burn");
+        return rawBurnByService.entrySet().stream()
+            .collect(Collectors.toMap(
+                entry -> entry.getKey().trim().toLowerCase(),
+                entry -> parseNonNegativeInt(entry.getValue(), "burn"),
+                (left, right) -> {
+                    throw new IllegalArgumentException("duplicate serviceId after normalization");
+                },
+                LinkedHashMap::new
+            ));
+    }
+
+    public static int totalBurnFromCsv(String burnCsv) {
+        if (burnCsv == null) {
+            throw new IllegalArgumentException("burnCsv must not be null");
+        }
+        if (burnCsv.isBlank()) {
+            return 0;
+        }
+        return Arrays.stream(burnCsv.split(","))
+            .map(String::trim)
+            .mapToInt(token -> parseNonNegativeInt(token, "burn"))
+            .reduce(0, Integer::sum);
+    }
+
     private static void validateNonBlank(String value, String fieldName) {
         if (value == null || value.isBlank()) {
             throw new IllegalArgumentException(fieldName + " must be non-blank");
@@ -209,6 +239,18 @@ public final class IncidentOpsMaps {
         for (Map.Entry<String, String> entry : values.entrySet()) {
             validateNonBlank(entry.getKey(), keyName);
             validateNonBlank(entry.getValue(), valueName);
+        }
+    }
+
+    private static int parseNonNegativeInt(String text, String fieldName) {
+        try {
+            int value = Integer.parseInt(text.trim());
+            if (value < 0) {
+                throw new IllegalArgumentException(fieldName + " must be >= 0");
+            }
+            return value;
+        } catch (NumberFormatException ex) {
+            throw new IllegalArgumentException(fieldName + " must be a valid integer", ex);
         }
     }
 }

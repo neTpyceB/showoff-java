@@ -391,4 +391,50 @@ class IncidentOpsMapsTest {
         withBlankOwner.put("payments-api", " ");
         assertThrows(IllegalArgumentException.class, () -> IncidentOpsMaps.ownerServiceCounts(withBlankOwner));
     }
+
+    @Test
+    void parseBurnByService_transformsRawMapToTypedMap() {
+        Map<String, String> raw = new LinkedHashMap<>();
+        raw.put(" Payments-Api ", "12");
+        raw.put("identity-api", "7");
+
+        assertEquals(
+            Map.of("payments-api", 12, "identity-api", 7),
+            IncidentOpsMaps.parseBurnByService(raw)
+        );
+    }
+
+    @Test
+    void parseBurnByService_validatesAndThrowsForInvalidInput() {
+        assertThrows(IllegalArgumentException.class, () -> IncidentOpsMaps.parseBurnByService(null));
+
+        Map<String, String> withDuplicateAfterNormalization = new LinkedHashMap<>();
+        withDuplicateAfterNormalization.put("Payments-Api", "5");
+        withDuplicateAfterNormalization.put(" payments-api ", "6");
+        assertThrows(
+            IllegalArgumentException.class,
+            () -> IncidentOpsMaps.parseBurnByService(withDuplicateAfterNormalization)
+        );
+
+        Map<String, String> withNegative = new LinkedHashMap<>();
+        withNegative.put("payments-api", "-1");
+        assertThrows(IllegalArgumentException.class, () -> IncidentOpsMaps.parseBurnByService(withNegative));
+
+        Map<String, String> withInvalidNumber = new LinkedHashMap<>();
+        withInvalidNumber.put("payments-api", "12x");
+        assertThrows(IllegalArgumentException.class, () -> IncidentOpsMaps.parseBurnByService(withInvalidNumber));
+    }
+
+    @Test
+    void totalBurnFromCsv_reducesParsedValues() {
+        assertEquals(23, IncidentOpsMaps.totalBurnFromCsv("12, 7,4"));
+        assertEquals(0, IncidentOpsMaps.totalBurnFromCsv("   "));
+    }
+
+    @Test
+    void totalBurnFromCsv_validatesAndThrowsForInvalidInput() {
+        assertThrows(IllegalArgumentException.class, () -> IncidentOpsMaps.totalBurnFromCsv(null));
+        assertThrows(IllegalArgumentException.class, () -> IncidentOpsMaps.totalBurnFromCsv("12, -1"));
+        assertThrows(IllegalArgumentException.class, () -> IncidentOpsMaps.totalBurnFromCsv("12, no-int"));
+    }
 }
