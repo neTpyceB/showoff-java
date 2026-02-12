@@ -4,6 +4,7 @@ import java.util.LinkedHashSet;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 public final class IncidentOpsSets {
     private IncidentOpsSets() {}
@@ -94,6 +95,23 @@ public final class IncidentOpsSets {
         Set<String> unresolved = new LinkedHashSet<>(defaults);
         unresolved.removeAll(overrides);
         return unresolved;
+    }
+
+    public static Set<String> normalizedRegionsByPrefix(Set<String> regions, String prefix) {
+        if (regions == null) {
+            throw new IllegalArgumentException("regions must not be null");
+        }
+        validateNonBlank(prefix, "prefix");
+        for (String region : regions) {
+            validateNonBlank(region, "region");
+        }
+        String normalizedPrefix = prefix.trim().toLowerCase();
+        return regions.stream()
+            .map(String::trim)
+            .map(String::toLowerCase)
+            .filter(region -> region.startsWith(normalizedPrefix))
+            .sorted()
+            .collect(Collectors.toCollection(LinkedHashSet::new));
     }
 
     private static void appendValidated(Set<String> target, Set<String> source) {

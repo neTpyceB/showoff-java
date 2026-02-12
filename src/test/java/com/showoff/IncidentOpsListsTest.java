@@ -174,4 +174,29 @@ class IncidentOpsListsTest {
             }
         );
     }
+
+    @Test
+    void normalizedOwnersByPriority_normalizesDistinctAndSorts() {
+        List<String> normalized = IncidentOpsLists.normalizedOwnersByPriority(
+            List.of(" Team-Payments ", "team-identity", "TEAM-PAYMENTS", "team-sre")
+        );
+        assertIterableEquals(List.of("team-identity", "team-payments", "team-sre"), normalized);
+    }
+
+    @Test
+    void normalizedOwnersByPriority_validatesInput() {
+        assertThrows(IllegalArgumentException.class, () -> IncidentOpsLists.normalizedOwnersByPriority(null));
+        assertThrows(
+            IllegalArgumentException.class,
+            () -> IncidentOpsLists.normalizedOwnersByPriority(new ArrayList<>(List.of("team-payments", " ")))
+        );
+        assertThrows(
+            IllegalArgumentException.class,
+            () -> {
+                List<String> owners = new ArrayList<>(List.of("team-payments"));
+                owners.add(null);
+                IncidentOpsLists.normalizedOwnersByPriority(owners);
+            }
+        );
+    }
 }

@@ -3,6 +3,7 @@ package com.showoff;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public final class IncidentOpsLists {
     private IncidentOpsLists() {}
@@ -89,6 +90,21 @@ public final class IncidentOpsLists {
         }
         int end = Math.min(windowSize, escalationChain.size());
         return new ArrayList<>(escalationChain.subList(0, end));
+    }
+
+    public static List<String> normalizedOwnersByPriority(List<String> ownerIds) {
+        if (ownerIds == null) {
+            throw new IllegalArgumentException("ownerIds must not be null");
+        }
+        for (String ownerId : ownerIds) {
+            validateNonBlank(ownerId, "ownerId");
+        }
+        return ownerIds.stream()
+            .map(String::trim)
+            .map(String::toLowerCase)
+            .distinct()
+            .sorted()
+            .collect(Collectors.toList());
     }
 
     private static void appendIfMissing(List<String> target, List<String> source) {
