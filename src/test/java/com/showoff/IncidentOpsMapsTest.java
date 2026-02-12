@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.junit.jupiter.api.Test;
 
@@ -244,5 +245,100 @@ class IncidentOpsMapsTest {
         Map<String, String> invalidKey = new LinkedHashMap<>();
         invalidKey.put(null, "#payments-incidents");
         assertThrows(NullPointerException.class, () -> IncidentOpsMaps.immutableRoutingSnapshot(invalidKey));
+    }
+
+    @Test
+    void servicesByDescendingBurn_sortsByBurnThenServiceId() {
+        Map<String, Integer> burn = new LinkedHashMap<>();
+        burn.put("payments-api", 8);
+        burn.put("identity-api", 12);
+        burn.put("search-api", 12);
+        burn.put("checkout-api", 1);
+
+        assertIterableEquals(
+            List.of("identity-api", "search-api", "payments-api", "checkout-api"),
+            IncidentOpsMaps.servicesByDescendingBurn(burn)
+        );
+        assertIterableEquals(List.of(), IncidentOpsMaps.servicesByDescendingBurn(new LinkedHashMap<>()));
+    }
+
+    @Test
+    void servicesByDescendingBurn_validatesInput() {
+        assertThrows(IllegalArgumentException.class, () -> IncidentOpsMaps.servicesByDescendingBurn(null));
+
+        Map<String, Integer> withNegative = new LinkedHashMap<>();
+        withNegative.put("payments-api", -1);
+        assertThrows(IllegalArgumentException.class, () -> IncidentOpsMaps.servicesByDescendingBurn(withNegative));
+
+        Map<String, Integer> withNullValue = new LinkedHashMap<>();
+        withNullValue.put("payments-api", null);
+        assertThrows(IllegalArgumentException.class, () -> IncidentOpsMaps.servicesByDescendingBurn(withNullValue));
+
+        Map<String, Integer> withBlankKey = new LinkedHashMap<>();
+        withBlankKey.put(" ", 1);
+        assertThrows(IllegalArgumentException.class, () -> IncidentOpsMaps.servicesByDescendingBurn(withBlankKey));
+    }
+
+    @Test
+    void mergeRoutingOverrides_mergesWithoutMutatingInputs() {
+        Map<String, String> base = new LinkedHashMap<>();
+        base.put("payments-api", "#payments");
+        base.put("identity-api", "#identity");
+
+        Map<String, String> overrides = new LinkedHashMap<>();
+        overrides.put("identity-api", "#identity-priority");
+        overrides.put("search-api", "#search");
+
+        Map<String, String> merged = IncidentOpsMaps.mergeRoutingOverrides(base, overrides);
+        assertEquals(
+            Map.of(
+                "payments-api", "#payments",
+                "identity-api", "#identity-priority",
+                "search-api", "#search"
+            ),
+            merged
+        );
+        assertEquals(Set.of("payments-api", "identity-api"), base.keySet());
+        assertEquals(Set.of("identity-api", "search-api"), overrides.keySet());
+    }
+
+    @Test
+    void mergeRoutingOverrides_validatesInputsAndEntries() {
+        assertThrows(IllegalArgumentException.class, () -> IncidentOpsMaps.mergeRoutingOverrides(null, Map.of()));
+        assertThrows(IllegalArgumentException.class, () -> IncidentOpsMaps.mergeRoutingOverrides(Map.of(), null));
+
+        Map<String, String> invalidBase = new LinkedHashMap<>();
+        invalidBase.put(" ", "#payments");
+        assertThrows(
+            IllegalArgumentException.class,
+            () -> IncidentOpsMaps.mergeRoutingOverrides(invalidBase, Map.of("identity-api", "#identity"))
+        );
+
+        Map<String, String> invalidOverride = new LinkedHashMap<>();
+        invalidOverride.put("identity-api", " ");
+        assertThrows(
+            IllegalArgumentException.class,
+            () -> IncidentOpsMaps.mergeRoutingOverrides(Map.of("payments-api", "#payments"), invalidOverride)
+        );
+    }
+
+    @Test
+    void removeServiceRouting_removesWhenPresentAndHandlesMissing() {
+        Map<String, String> routing = new LinkedHashMap<>();
+        routing.put("payments-api", "#payments");
+        routing.put("identity-api", "#identity");
+
+        assertTrue(IncidentOpsMaps.removeServiceRouting(routing, "payments-api"));
+        assertEquals(1, routing.size());
+        assertEquals(false, IncidentOpsMaps.removeServiceRouting(routing, "payments-api"));
+    }
+
+    @Test
+    void removeServiceRouting_validatesInput() {
+        assertThrows(IllegalArgumentException.class, () -> IncidentOpsMaps.removeServiceRouting(null, "payments-api"));
+        assertThrows(
+            IllegalArgumentException.class,
+            () -> IncidentOpsMaps.removeServiceRouting(new LinkedHashMap<>(), " ")
+        );
     }
 }

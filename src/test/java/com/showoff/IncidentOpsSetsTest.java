@@ -106,4 +106,63 @@ class IncidentOpsSetsTest {
         withNull.add(null);
         assertThrows(NullPointerException.class, () -> IncidentOpsSets.immutableMaintenanceWindows(withNull));
     }
+
+    @Test
+    void sortedActiveRegions_sortsAlphabetically() {
+        Set<String> regions = new LinkedHashSet<>(List.of("eu-west-1", "ap-south-1", "us-east-1"));
+        assertIterableEquals(List.of("ap-south-1", "eu-west-1", "us-east-1"), IncidentOpsSets.sortedActiveRegions(regions));
+    }
+
+    @Test
+    void sortedActiveRegions_validatesInput() {
+        assertThrows(IllegalArgumentException.class, () -> IncidentOpsSets.sortedActiveRegions(null));
+
+        Set<String> withBlank = new LinkedHashSet<>(List.of("eu-west-1"));
+        withBlank.add(" ");
+        assertThrows(IllegalArgumentException.class, () -> IncidentOpsSets.sortedActiveRegions(withBlank));
+
+        Set<String> withNull = new LinkedHashSet<>(List.of("eu-west-1"));
+        withNull.add(null);
+        assertThrows(IllegalArgumentException.class, () -> IncidentOpsSets.sortedActiveRegions(withNull));
+    }
+
+    @Test
+    void sharedResponderGroups_andUnresolvedSuppressionCodes_coverSetOps() {
+        Set<String> left = new LinkedHashSet<>(List.of("payments-oncall", "platform-oncall", "security-oncall"));
+        Set<String> right = new LinkedHashSet<>(List.of("platform-oncall", "sre-oncall", "security-oncall"));
+        assertIterableEquals(
+            List.of("platform-oncall", "security-oncall"),
+            new ArrayList<>(IncidentOpsSets.sharedResponderGroups(left, right))
+        );
+
+        Set<String> defaults = new LinkedHashSet<>(List.of("DEPLOYMENT_IN_PROGRESS", "READ_REPLICA_LAG"));
+        Set<String> overrides = new LinkedHashSet<>(List.of("READ_REPLICA_LAG"));
+        assertIterableEquals(
+            List.of("DEPLOYMENT_IN_PROGRESS"),
+            new ArrayList<>(IncidentOpsSets.unresolvedSuppressionCodes(defaults, overrides))
+        );
+    }
+
+    @Test
+    void sharedResponderGroups_andUnresolvedSuppressionCodes_validateInput() {
+        assertThrows(IllegalArgumentException.class, () -> IncidentOpsSets.sharedResponderGroups(null, Set.of()));
+        assertThrows(IllegalArgumentException.class, () -> IncidentOpsSets.sharedResponderGroups(Set.of(), null));
+
+        Set<String> invalidLeft = new LinkedHashSet<>(List.of("payments-oncall"));
+        invalidLeft.add(" ");
+        assertThrows(
+            IllegalArgumentException.class,
+            () -> IncidentOpsSets.sharedResponderGroups(invalidLeft, Set.of("platform-oncall"))
+        );
+
+        assertThrows(IllegalArgumentException.class, () -> IncidentOpsSets.unresolvedSuppressionCodes(null, Set.of()));
+        assertThrows(IllegalArgumentException.class, () -> IncidentOpsSets.unresolvedSuppressionCodes(Set.of(), null));
+
+        Set<String> invalidOverrides = new LinkedHashSet<>(List.of("DEPLOYMENT_IN_PROGRESS"));
+        invalidOverrides.add(null);
+        assertThrows(
+            IllegalArgumentException.class,
+            () -> IncidentOpsSets.unresolvedSuppressionCodes(Set.of("DEPLOYMENT_IN_PROGRESS"), invalidOverrides)
+        );
+    }
 }

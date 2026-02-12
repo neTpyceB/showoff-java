@@ -1,6 +1,7 @@
 package com.showoff;
 
 import java.util.LinkedHashSet;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
@@ -54,12 +55,63 @@ public final class IncidentOpsSets {
         return Set.copyOf(windows);
     }
 
+    public static List<String> sortedActiveRegions(Set<String> regions) {
+        if (regions == null) {
+            throw new IllegalArgumentException("regions must not be null");
+        }
+        List<String> sorted = new ArrayList<>(regions.size());
+        for (String region : regions) {
+            validateNonBlank(region, "region");
+            sorted.add(region);
+        }
+        sorted.sort(String::compareTo);
+        return sorted;
+    }
+
+    public static Set<String> sharedResponderGroups(Set<String> left, Set<String> right) {
+        if (left == null) {
+            throw new IllegalArgumentException("left must not be null");
+        }
+        if (right == null) {
+            throw new IllegalArgumentException("right must not be null");
+        }
+        validateAll(left, "group");
+        validateAll(right, "group");
+        Set<String> shared = new LinkedHashSet<>(left);
+        shared.retainAll(right);
+        return shared;
+    }
+
+    public static Set<String> unresolvedSuppressionCodes(Set<String> defaults, Set<String> overrides) {
+        if (defaults == null) {
+            throw new IllegalArgumentException("defaults must not be null");
+        }
+        if (overrides == null) {
+            throw new IllegalArgumentException("overrides must not be null");
+        }
+        validateAll(defaults, "code");
+        validateAll(overrides, "code");
+        Set<String> unresolved = new LinkedHashSet<>(defaults);
+        unresolved.removeAll(overrides);
+        return unresolved;
+    }
+
     private static void appendValidated(Set<String> target, Set<String> source) {
         for (String group : source) {
-            if (group == null || group.isBlank()) {
-                throw new IllegalArgumentException("group id must be non-blank");
-            }
+            validateNonBlank(group, "group");
             target.add(group);
+        }
+    }
+
+    private static void validateAll(Set<String> values, String fieldName) {
+        for (String value : values) {
+            validateNonBlank(value, fieldName);
+        }
+    }
+
+    private static void validateNonBlank(String value, String fieldName) {
+        if (value == null || value.isBlank()) {
+            throw new IllegalArgumentException(fieldName + " must be non-blank");
         }
     }
 }

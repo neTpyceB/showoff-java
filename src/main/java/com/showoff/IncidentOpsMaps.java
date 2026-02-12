@@ -119,9 +119,68 @@ public final class IncidentOpsMaps {
         return Map.copyOf(serviceToChannel);
     }
 
+    public static List<String> servicesByDescendingBurn(Map<String, Integer> serviceToBurn) {
+        if (serviceToBurn == null) {
+            throw new IllegalArgumentException("serviceToBurn must not be null");
+        }
+        List<Map.Entry<String, Integer>> entries = new ArrayList<>(serviceToBurn.size());
+        for (Map.Entry<String, Integer> entry : serviceToBurn.entrySet()) {
+            validateNonBlank(entry.getKey(), "serviceId");
+            if (entry.getValue() == null || entry.getValue() < 0) {
+                throw new IllegalArgumentException("burn value must be >= 0");
+            }
+            entries.add(entry);
+        }
+        entries.sort((a, b) -> {
+            int byBurn = Integer.compare(b.getValue(), a.getValue());
+            if (byBurn != 0) {
+                return byBurn;
+            }
+            return a.getKey().compareTo(b.getKey());
+        });
+        List<String> services = new ArrayList<>(entries.size());
+        for (Map.Entry<String, Integer> entry : entries) {
+            services.add(entry.getKey());
+        }
+        return services;
+    }
+
+    public static Map<String, String> mergeRoutingOverrides(
+        Map<String, String> baseRouting,
+        Map<String, String> overrideRouting
+    ) {
+        if (baseRouting == null) {
+            throw new IllegalArgumentException("baseRouting must not be null");
+        }
+        if (overrideRouting == null) {
+            throw new IllegalArgumentException("overrideRouting must not be null");
+        }
+        validateEntries(baseRouting, "serviceId", "channel");
+        validateEntries(overrideRouting, "serviceId", "channel");
+
+        Map<String, String> merged = new LinkedHashMap<>(baseRouting);
+        merged.putAll(overrideRouting);
+        return merged;
+    }
+
+    public static boolean removeServiceRouting(Map<String, String> serviceToChannel, String serviceId) {
+        if (serviceToChannel == null) {
+            throw new IllegalArgumentException("serviceToChannel must not be null");
+        }
+        validateNonBlank(serviceId, "serviceId");
+        return serviceToChannel.remove(serviceId) != null;
+    }
+
     private static void validateNonBlank(String value, String fieldName) {
         if (value == null || value.isBlank()) {
             throw new IllegalArgumentException(fieldName + " must be non-blank");
+        }
+    }
+
+    private static void validateEntries(Map<String, String> values, String keyName, String valueName) {
+        for (Map.Entry<String, String> entry : values.entrySet()) {
+            validateNonBlank(entry.getKey(), keyName);
+            validateNonBlank(entry.getValue(), valueName);
         }
     }
 }
