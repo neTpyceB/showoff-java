@@ -4,6 +4,7 @@ import com.showoff.incidentops.springboot.persistence.dto.CreateIncidentTicketRe
 import com.showoff.incidentops.springboot.persistence.dto.IncidentTicketResponse;
 import com.showoff.incidentops.springboot.persistence.entity.IncidentTicketEntity;
 import com.showoff.incidentops.springboot.persistence.exception.IncidentTicketNotFoundException;
+import com.showoff.incidentops.springboot.persistence.mapper.IncidentTicketMapper;
 import com.showoff.incidentops.springboot.persistence.repository.IncidentTicketRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -13,30 +14,27 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.concurrent.atomic.AtomicInteger;
 
 @Service
-public class IncidentTicketService {
+public class IncidentTicketService implements IncidentTicketCommandService, IncidentTicketQueryService {
     private final IncidentTicketRepository repository;
+    private final IncidentTicketMapper mapper;
     private final AtomicInteger sequence = new AtomicInteger(5000);
 
-    public IncidentTicketService(IncidentTicketRepository repository) {
+    public IncidentTicketService(IncidentTicketRepository repository, IncidentTicketMapper mapper) {
         this.repository = repository;
+        this.mapper = mapper;
     }
 
+    @Override
     @Transactional
     public IncidentTicketResponse create(CreateIncidentTicketRequest request) {
         if (request == null) {
             throw new IllegalArgumentException("request must not be null");
         }
-        IncidentTicketEntity entity = new IncidentTicketEntity(
-            "TKT-" + sequence.incrementAndGet(),
-            request.serviceId().trim().toLowerCase(),
-            request.severity(),
-            request.summary().trim(),
-            "OPEN"
-        );
-        IncidentTicketEntity saved = repository.save(entity);
-        return toResponse(saved);
+        String ticketId = "TKT-" + sequence.incrementAndGet();
+        return mapper.toResponse(repository.save(mapper.toNewEntity(ticketId, request)));
     }
 
+    @Override
     @Transactional(readOnly = true)
     public IncidentTicketResponse getByTicketId(String ticketId) {
         validateTicketId(ticketId);
@@ -44,9 +42,10 @@ public class IncidentTicketService {
             .orElseThrow(() -> new IncidentTicketNotFoundException(
                 "ticket not found: " + ticketId.trim().toUpperCase()
             ));
-        return toResponse(entity);
+        return mapper.toResponse(entity);
     }
 
+    @Override
     @Transactional(readOnly = true)
     public Page<IncidentTicketResponse> listByStatus(String status, int page, int size) {
         validateNonBlank(status, "status");
@@ -54,9 +53,10 @@ public class IncidentTicketService {
         return repository.findByStatusOrderBySeverityDescTicketIdAsc(
             status.trim().toUpperCase(),
             PageRequest.of(page, size)
-        ).map(IncidentTicketService::toResponse);
+        ).map(mapper::toResponse);
     }
 
+    @Override
     @Transactional(readOnly = true)
     public Page<IncidentTicketResponse> searchByServiceAndMinSeverity(
         String serviceId,
@@ -73,9 +73,10 @@ public class IncidentTicketService {
             serviceId.trim(),
             minSeverity,
             PageRequest.of(page, size)
-        ).map(IncidentTicketService::toResponse);
+        ).map(mapper::toResponse);
     }
 
+    @Override
     @Transactional
     public void createAndFailForRollback(CreateIncidentTicketRequest request) {
         if (request == null) {
@@ -83,16 +84,6 @@ public class IncidentTicketService {
         }
         create(request);
         throw new IllegalStateException("simulated failure after create");
-    }
-
-    private static IncidentTicketResponse toResponse(IncidentTicketEntity entity) {
-        return new IncidentTicketResponse(
-            entity.getTicketId(),
-            entity.getServiceId(),
-            entity.getSeverity(),
-            entity.getSummary(),
-            entity.getStatus()
-        );
     }
 
     private static void validateTicketId(String ticketId) {

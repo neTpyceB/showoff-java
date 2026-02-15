@@ -4,6 +4,7 @@ import com.showoff.incidentops.springboot.persistence.dto.CreateIncidentTicketRe
 import com.showoff.incidentops.springboot.persistence.dto.IncidentTicketResponse;
 import com.showoff.incidentops.springboot.persistence.entity.IncidentTicketEntity;
 import com.showoff.incidentops.springboot.persistence.exception.IncidentTicketNotFoundException;
+import com.showoff.incidentops.springboot.persistence.mapper.IncidentTicketMapper;
 import com.showoff.incidentops.springboot.persistence.repository.IncidentTicketRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.data.domain.PageImpl;
@@ -26,7 +27,7 @@ class IncidentTicketServiceTest {
     void create_mapsAndPersistsTicket() {
         IncidentTicketRepository repository = mock(IncidentTicketRepository.class);
         when(repository.save(any(IncidentTicketEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
-        IncidentTicketService service = new IncidentTicketService(repository);
+        IncidentTicketService service = new IncidentTicketService(repository, new IncidentTicketMapper());
 
         IncidentTicketResponse response = service.create(new CreateIncidentTicketRequest(" Payments-Api ", 4, " queue delay "));
         assertTrue(response.ticketId().startsWith("TKT-"));
@@ -43,7 +44,7 @@ class IncidentTicketServiceTest {
             Optional.of(new IncidentTicketEntity("TKT-9001", "identity-api", 3, "token issue", "OPEN"))
         );
         when(repository.findByTicketId(eq("TKT-9999"))).thenReturn(Optional.empty());
-        IncidentTicketService service = new IncidentTicketService(repository);
+        IncidentTicketService service = new IncidentTicketService(repository, new IncidentTicketMapper());
 
         IncidentTicketResponse response = service.getByTicketId("tkt-9001");
         assertEquals("TKT-9001", response.ticketId());
@@ -55,7 +56,7 @@ class IncidentTicketServiceTest {
     @Test
     void service_validatesInput() {
         IncidentTicketRepository repository = mock(IncidentTicketRepository.class);
-        IncidentTicketService service = new IncidentTicketService(repository);
+        IncidentTicketService service = new IncidentTicketService(repository, new IncidentTicketMapper());
 
         assertThrows(IllegalArgumentException.class, () -> service.create(null));
         assertThrows(IllegalArgumentException.class, () -> service.getByTicketId(null));
@@ -76,7 +77,7 @@ class IncidentTicketServiceTest {
     @Test
     void listByStatus_andSearchByServiceAndMinSeverity_mapPagedResults() {
         IncidentTicketRepository repository = mock(IncidentTicketRepository.class);
-        IncidentTicketService service = new IncidentTicketService(repository);
+        IncidentTicketService service = new IncidentTicketService(repository, new IncidentTicketMapper());
 
         when(repository.findByStatusOrderBySeverityDescTicketIdAsc(eq("OPEN"), any())).thenReturn(
             new PageImpl<>(
@@ -113,7 +114,7 @@ class IncidentTicketServiceTest {
     void createAndFailForRollback_throwsAfterPersistAttempt() {
         IncidentTicketRepository repository = mock(IncidentTicketRepository.class);
         when(repository.save(any(IncidentTicketEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
-        IncidentTicketService service = new IncidentTicketService(repository);
+        IncidentTicketService service = new IncidentTicketService(repository, new IncidentTicketMapper());
 
         assertThrows(
             IllegalStateException.class,

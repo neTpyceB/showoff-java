@@ -3,7 +3,8 @@ package com.showoff.incidentops.springboot.persistence.controller;
 import com.showoff.incidentops.springboot.persistence.dto.CreateIncidentTicketRequest;
 import com.showoff.incidentops.springboot.persistence.dto.IncidentTicketResponse;
 import com.showoff.incidentops.springboot.persistence.exception.IncidentTicketNotFoundException;
-import com.showoff.incidentops.springboot.persistence.service.IncidentTicketService;
+import com.showoff.incidentops.springboot.persistence.service.IncidentTicketCommandService;
+import com.showoff.incidentops.springboot.persistence.service.IncidentTicketQueryService;
 import com.showoff.incidentops.springboot.rest.exception.ApiErrorResponse;
 import com.showoff.incidentops.springboot.rest.exception.GlobalApiExceptionHandler;
 import jakarta.validation.ConstraintViolationException;
@@ -31,14 +32,16 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 class IncidentTicketControllerTest {
-    private IncidentTicketService ticketService;
+    private IncidentTicketCommandService commandService;
+    private IncidentTicketQueryService queryService;
     private MockMvc mvc;
     private LocalValidatorFactoryBean validator;
 
     @BeforeEach
     void setUp() {
-        ticketService = mock(IncidentTicketService.class);
-        IncidentTicketController controller = new IncidentTicketController(ticketService);
+        commandService = mock(IncidentTicketCommandService.class);
+        queryService = mock(IncidentTicketQueryService.class);
+        IncidentTicketController controller = new IncidentTicketController(commandService, queryService);
         validator = new LocalValidatorFactoryBean();
         validator.afterPropertiesSet();
         mvc = MockMvcBuilders.standaloneSetup(controller)
@@ -54,7 +57,7 @@ class IncidentTicketControllerTest {
 
     @Test
     void create_returns201WithJsonResponse() throws Exception {
-        when(ticketService.create(any(CreateIncidentTicketRequest.class))).thenReturn(
+        when(commandService.create(any(CreateIncidentTicketRequest.class))).thenReturn(
             new IncidentTicketResponse("TKT-7001", "payments-api", 4, "queue delay", "OPEN")
         );
 
@@ -74,7 +77,7 @@ class IncidentTicketControllerTest {
 
     @Test
     void getById_returns200ForExistingTicket() throws Exception {
-        when(ticketService.getByTicketId(eq("TKT-7001"))).thenReturn(
+        when(queryService.getByTicketId(eq("TKT-7001"))).thenReturn(
             new IncidentTicketResponse("TKT-7001", "identity-api", 3, "token issue", "OPEN")
         );
 
@@ -86,7 +89,7 @@ class IncidentTicketControllerTest {
 
     @Test
     void listAndSearch_returnPagedPayloads() throws Exception {
-        when(ticketService.listByStatus(eq("OPEN"), eq(0), eq(2))).thenReturn(
+        when(queryService.listByStatus(eq("OPEN"), eq(0), eq(2))).thenReturn(
             new PageImpl<>(
                 List.of(
                     new IncidentTicketResponse("TKT-7002", "payments-api", 5, "db outage", "OPEN"),
@@ -96,7 +99,7 @@ class IncidentTicketControllerTest {
                 3
             )
         );
-        when(ticketService.searchByServiceAndMinSeverity(eq("payments-api"), eq(4), eq(0), eq(1))).thenReturn(
+        when(queryService.searchByServiceAndMinSeverity(eq("payments-api"), eq(4), eq(0), eq(1))).thenReturn(
             new PageImpl<>(
                 List.of(new IncidentTicketResponse("TKT-7002", "payments-api", 5, "db outage", "OPEN")),
                 PageRequest.of(0, 1),
@@ -143,9 +146,9 @@ class IncidentTicketControllerTest {
 
     @Test
     void centralizedExceptionHandling_maps404And400And500() throws Exception {
-        when(ticketService.getByTicketId(eq("TKT-8888"))).thenThrow(new IncidentTicketNotFoundException("ticket not found: TKT-8888"));
-        when(ticketService.getByTicketId(eq("TKT-8889"))).thenThrow(new IllegalArgumentException("ticketId must not be blank"));
-        when(ticketService.getByTicketId(eq("TKT-8890"))).thenThrow(new RuntimeException("unexpected"));
+        when(queryService.getByTicketId(eq("TKT-8888"))).thenThrow(new IncidentTicketNotFoundException("ticket not found: TKT-8888"));
+        when(queryService.getByTicketId(eq("TKT-8889"))).thenThrow(new IllegalArgumentException("ticketId must not be blank"));
+        when(queryService.getByTicketId(eq("TKT-8890"))).thenThrow(new RuntimeException("unexpected"));
 
         mvc.perform(get("/api/v4/tickets/TKT-8888"))
             .andExpect(status().isNotFound())
