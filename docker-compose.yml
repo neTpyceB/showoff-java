@@ -1,4 +1,34 @@
 services:
+  app:
+    image: gradle:9.3.1-jdk21
+    container_name: showoff-java-app
+    working_dir: /workspace
+    command: ["./gradlew", "--no-daemon", "runIncidentApi"]
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: incidentops
+      POSTGRES_USER: incidentops
+      POSTGRES_PASSWORD: incidentops
+      REDIS_HOST: redis
+      RABBITMQ_HOST: rabbitmq
+      SERVER_PORT: 8080
+    volumes:
+      - ./:/workspace
+      - gradle_cache:/home/gradle/.gradle
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      rabbitmq:
+        condition: service_started
+    restart: unless-stopped
+    networks:
+      - incidentops_net
+
   postgres:
     image: postgres:17
     container_name: showoff-java-postgres
@@ -15,6 +45,32 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+    restart: unless-stopped
+    networks:
+      - incidentops_net
+
+  redis:
+    image: redis:8-alpine
+    container_name: showoff-java-redis
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+    networks:
+      - incidentops_net
+
+  rabbitmq:
+    image: rabbitmq:4-management
+    container_name: showoff-java-rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    restart: unless-stopped
+    networks:
+      - incidentops_net
 
 volumes:
   postgres_data:
+  gradle_cache:
+
+networks:
+  incidentops_net:
