@@ -12,6 +12,12 @@ import org.junit.jupiter.api.Test;
 
 class AppTest {
     @Test
+    void app_constructor_isCallable() {
+        App app = new App();
+        assertTrue(app instanceof App);
+    }
+
+    @Test
     void main_printsHelloWorld() {
         String output = captureStdout(() -> App.main(new String[0]));
         assertEquals("Hello World" + System.lineSeparator(), output);
@@ -77,6 +83,48 @@ class AppTest {
     @Test
     void modulo_throwsOnZeroDivisor() {
         assertThrows(ArithmeticException.class, () -> VariablesExpressions.modulo(10, 0));
+    }
+
+    @Test
+    void variablesExpressions_printDemo_andAlternateBranches() {
+        String output = captureStdout(VariablesExpressions::printDemo);
+        assertTrue(output.contains("compound=1"));
+        assertTrue(output.contains("isNull=true"));
+
+        VariablesExpressions.Results alt = VariablesExpressions.computeWithInputs(
+            (byte) 10,
+            (short) 300,
+            5,
+            10L,
+            2.0f,
+            4.0d,
+            'A',
+            false,
+            "Kotlin",
+            new Object()
+        );
+        assertFalse(alt.gt());
+        assertFalse(alt.eq());
+        assertFalse(alt.and());
+        assertFalse(alt.or());
+        assertTrue(alt.not());
+        assertEquals("small", alt.ternary());
+        assertFalse(alt.isNull());
+
+        VariablesExpressions.Results andFalseWithFlagTrue = VariablesExpressions.computeWithInputs(
+            (byte) 10,
+            (short) 300,
+            1,
+            10L,
+            2.0f,
+            4.0d,
+            'A',
+            true,
+            "Java",
+            null
+        );
+        assertFalse(andFalseWithFlagTrue.and());
+        assertTrue(andFalseWithFlagTrue.or());
     }
 
     private static String captureStdout(Runnable action) {

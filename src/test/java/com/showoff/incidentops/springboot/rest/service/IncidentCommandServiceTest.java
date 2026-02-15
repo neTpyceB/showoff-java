@@ -29,6 +29,7 @@ class IncidentCommandServiceTest {
     void service_throwsForInvalidArgumentsAndMissingEntities() {
         IncidentCommandService service = new IncidentCommandService();
         assertThrows(IllegalArgumentException.class, () -> service.create(null));
+        assertThrows(IllegalArgumentException.class, () -> service.getById(null));
         assertThrows(IllegalArgumentException.class, () -> service.getById(" "));
         assertThrows(IncidentNotFoundException.class, () -> service.getById("INC-9999"));
     }

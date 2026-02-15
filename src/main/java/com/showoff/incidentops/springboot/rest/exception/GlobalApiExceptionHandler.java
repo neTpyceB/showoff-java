@@ -1,5 +1,6 @@
 package com.showoff.incidentops.springboot.rest.exception;
 
+import com.showoff.incidentops.springboot.persistence.exception.IncidentTicketNotFoundException;
 import jakarta.validation.ConstraintViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -39,6 +40,13 @@ public class GlobalApiExceptionHandler {
     public ResponseEntity<ApiErrorResponse> handleNotFound(IncidentNotFoundException ex) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
             new ApiErrorResponse("INCIDENT_NOT_FOUND", ex.getMessage(), Map.of())
+        );
+    }
+
+    @ExceptionHandler(IncidentTicketNotFoundException.class)
+    public ResponseEntity<ApiErrorResponse> handleTicketNotFound(IncidentTicketNotFoundException ex) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
+            new ApiErrorResponse("TICKET_NOT_FOUND", ex.getMessage(), Map.of())
         );
     }
 

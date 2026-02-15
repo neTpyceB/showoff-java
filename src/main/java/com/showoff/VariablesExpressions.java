@@ -18,6 +18,22 @@ public final class VariablesExpressions {
         String text = "Java";
         String nullRef = null;
 
+        return computeWithInputs(b, s, i, l, f, d, c, flag, text, nullRef);
+    }
+
+    static Results computeWithInputs(
+        byte b,
+        short s,
+        int i,
+        long l,
+        float f,
+        double d,
+        char c,
+        boolean flag,
+        String text,
+        Object nullableRef
+    ) {
+
         // Arithmetic
         int sum = add(i, b);
         int diff = subtract(i, s);
@@ -65,7 +81,7 @@ public final class VariablesExpressions {
         int overflow = addOverflow(max);
 
         // Null check
-        boolean isNull = isNull(nullRef);
+        boolean isNull = isNull(nullableRef);
 
         return new Results(
             b, s, i, l, f, d, c, flag,

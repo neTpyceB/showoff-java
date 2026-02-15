@@ -35,6 +35,12 @@ class IncidentOpsFunctionalWorkflowsTest {
             IllegalArgumentException.class,
             () -> IncidentOpsFunctionalWorkflows.transformServiceIds(new ArrayList<>(List.of(" ")), value -> value)
         );
+        List<String> withNull = new ArrayList<>();
+        withNull.add(null);
+        assertThrows(
+            IllegalArgumentException.class,
+            () -> IncidentOpsFunctionalWorkflows.transformServiceIds(withNull, value -> value)
+        );
         assertThrows(
             IllegalArgumentException.class,
             () -> IncidentOpsFunctionalWorkflows.transformServiceIds(List.of("payments-api"), value -> " ")
@@ -64,6 +70,12 @@ class IncidentOpsFunctionalWorkflowsTest {
             IllegalArgumentException.class,
             () -> IncidentOpsFunctionalWorkflows.selectEscalationCandidates(new ArrayList<>(List.of(" ")), incidentId -> true)
         );
+        List<String> withNull = new ArrayList<>();
+        withNull.add(null);
+        assertThrows(
+            IllegalArgumentException.class,
+            () -> IncidentOpsFunctionalWorkflows.selectEscalationCandidates(withNull, incidentId -> true)
+        );
     }
 
     @Test
@@ -90,6 +102,12 @@ class IncidentOpsFunctionalWorkflowsTest {
         assertThrows(
             IllegalArgumentException.class,
             () -> IncidentOpsFunctionalWorkflows.sendPagerNotifications(new ArrayList<>(List.of(" ")), channel -> {})
+        );
+        List<String> withNull = new ArrayList<>();
+        withNull.add(null);
+        assertThrows(
+            IllegalArgumentException.class,
+            () -> IncidentOpsFunctionalWorkflows.sendPagerNotifications(withNull, channel -> {})
         );
     }
 

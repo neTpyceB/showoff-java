@@ -61,6 +61,7 @@ class ControlFlowTest {
     void sumSkippingMultiples_breakAndContinue() {
         assertEquals(0, ControlFlow.sumSkippingMultiples(0, 2));
         assertEquals(9, ControlFlow.sumSkippingMultiples(5, 2));
+        assertEquals(1_001_059, ControlFlow.sumSkippingMultiples(2_000, 7));
         assertThrows(IllegalArgumentException.class, () -> ControlFlow.sumSkippingMultiples(-1, 2));
         assertThrows(IllegalArgumentException.class, () -> ControlFlow.sumSkippingMultiples(5, 0));
     }

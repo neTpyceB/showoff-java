@@ -169,6 +169,30 @@ class IncidentOpsStreamAnalyticsTest {
         assertThrows(
             IllegalArgumentException.class,
             () -> IncidentOpsStreamAnalytics.sortedCriticalIncidentIds(
+                List.of(new IncidentOpsStreamAnalytics.IncidentEvent("INC-1", "payments-api", 6, "team-payments", 1))
+            )
+        );
+        assertThrows(
+            IllegalArgumentException.class,
+            () -> IncidentOpsStreamAnalytics.sortedCriticalIncidentIds(
+                List.of(new IncidentOpsStreamAnalytics.IncidentEvent(null, "payments-api", 3, "team-payments", 1))
+            )
+        );
+        assertThrows(
+            IllegalArgumentException.class,
+            () -> IncidentOpsStreamAnalytics.sortedCriticalIncidentIds(
+                List.of(new IncidentOpsStreamAnalytics.IncidentEvent("INC-1", null, 3, "team-payments", 1))
+            )
+        );
+        assertThrows(
+            IllegalArgumentException.class,
+            () -> IncidentOpsStreamAnalytics.sortedCriticalIncidentIds(
+                List.of(new IncidentOpsStreamAnalytics.IncidentEvent("INC-1", "payments-api", 3, null, 1))
+            )
+        );
+        assertThrows(
+            IllegalArgumentException.class,
+            () -> IncidentOpsStreamAnalytics.sortedCriticalIncidentIds(
                 List.of(new IncidentOpsStreamAnalytics.IncidentEvent("INC-1", "payments-api", 3, "team-payments", -1))
             )
         );
