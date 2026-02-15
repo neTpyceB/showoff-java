@@ -1,4 +1,4 @@
-package com.showoff;
+package com.showoff.incidentops.reliability;
 
 public class IncidentValidationException extends RuntimeException {
     public IncidentValidationException(String message) {
