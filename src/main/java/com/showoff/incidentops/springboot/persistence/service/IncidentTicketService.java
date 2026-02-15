@@ -1,5 +1,6 @@
 package com.showoff.incidentops.springboot.persistence.service;
 
+import com.showoff.incidentops.springboot.config.IncidentOpsProperties;
 import com.showoff.incidentops.springboot.persistence.dto.CreateIncidentTicketRequest;
 import com.showoff.incidentops.springboot.persistence.dto.IncidentTicketResponse;
 import com.showoff.incidentops.springboot.persistence.entity.IncidentTicketEntity;
@@ -17,11 +18,17 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class IncidentTicketService implements IncidentTicketCommandService, IncidentTicketQueryService {
     private final IncidentTicketRepository repository;
     private final IncidentTicketMapper mapper;
+    private final IncidentOpsProperties properties;
     private final AtomicInteger sequence = new AtomicInteger(5000);
 
-    public IncidentTicketService(IncidentTicketRepository repository, IncidentTicketMapper mapper) {
+    public IncidentTicketService(
+        IncidentTicketRepository repository,
+        IncidentTicketMapper mapper,
+        IncidentOpsProperties properties
+    ) {
         this.repository = repository;
         this.mapper = mapper;
+        this.properties = properties;
     }
 
     @Override
@@ -48,10 +55,11 @@ public class IncidentTicketService implements IncidentTicketCommandService, Inci
     @Override
     @Transactional(readOnly = true)
     public Page<IncidentTicketResponse> listByStatus(String status, int page, int size) {
-        validateNonBlank(status, "status");
+        String effectiveStatus = normalizeStatusOrDefault(status);
+        validateNonBlank(effectiveStatus, "status");
         validatePage(page, size);
         return repository.findByStatusOrderBySeverityDescTicketIdAsc(
-            status.trim().toUpperCase(),
+            effectiveStatus.trim().toUpperCase(),
             PageRequest.of(page, size)
         ).map(mapper::toResponse);
     }
@@ -92,12 +100,13 @@ public class IncidentTicketService implements IncidentTicketCommandService, Inci
         }
     }
 
-    private static void validatePage(int page, int size) {
+    private void validatePage(int page, int size) {
         if (page < 0) {
             throw new IllegalArgumentException("page must be >= 0");
         }
-        if (size <= 0 || size > 100) {
-            throw new IllegalArgumentException("size must be between 1 and 100");
+        int maxPageSize = properties.tickets().maxPageSize();
+        if (size <= 0 || size > maxPageSize) {
+            throw new IllegalArgumentException("size must be between 1 and " + maxPageSize);
         }
     }
 
@@ -105,5 +114,12 @@ public class IncidentTicketService implements IncidentTicketCommandService, Inci
         if (value == null || value.isBlank()) {
             throw new IllegalArgumentException(fieldName + " must not be blank");
         }
+    }
+
+    private String normalizeStatusOrDefault(String status) {
+        if (status == null || status.isBlank()) {
+            return properties.tickets().defaultStatus();
+        }
+        return status;
     }
 }

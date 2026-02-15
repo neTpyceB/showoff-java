@@ -70,3 +70,50 @@ Also remove volumes (if you want a clean DB):
 ```bash
 docker compose down -v
 ```
+
+### Profile files
+
+- `application.properties`: shared/base settings.
+- `application-dev.properties`: developer defaults.
+- `application-docker.properties`: Docker Compose profile.
+- `application-prod.properties`: production profile (env-driven, no defaults for secrets).
+
+### Activate profile
+
+```bash
+SPRING_PROFILES_ACTIVE=dev ./gradlew runIncidentApi
+SPRING_PROFILES_ACTIVE=docker ./gradlew runIncidentApi
+SPRING_PROFILES_ACTIVE=prod ./gradlew runIncidentApi
+```
+
+Docker Compose sets:
+- `SPRING_PROFILES_ACTIVE=docker`
+
+### Secrets via environment variables
+
+Required in non-dev environments:
+- `POSTGRES_HOST`
+- `POSTGRES_PORT`
+- `POSTGRES_DB`
+- `POSTGRES_USER`
+- `POSTGRES_PASSWORD`
+- `REDIS_HOST`
+- `RABBITMQ_HOST`
+- `INCIDENTOPS_API_KEY`
+- `INCIDENTOPS_SIGNING_SECRET`
+
+Example (prod-like local run):
+
+```bash
+POSTGRES_HOST=localhost \
+POSTGRES_PORT=5432 \
+POSTGRES_DB=incidentops \
+POSTGRES_USER=incidentops \
+POSTGRES_PASSWORD=incidentops \
+REDIS_HOST=localhost \
+RABBITMQ_HOST=localhost \
+INCIDENTOPS_API_KEY=replace-me \
+INCIDENTOPS_SIGNING_SECRET=replace-me-too \
+SPRING_PROFILES_ACTIVE=prod \
+./gradlew runIncidentApi
+```

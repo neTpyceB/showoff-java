@@ -1,5 +1,6 @@
 package com.showoff.incidentops.springboot.persistence.service;
 
+import com.showoff.incidentops.springboot.config.IncidentOpsProperties;
 import com.showoff.incidentops.springboot.persistence.dto.CreateIncidentTicketRequest;
 import com.showoff.incidentops.springboot.persistence.dto.IncidentTicketResponse;
 import com.showoff.incidentops.springboot.persistence.entity.IncidentTicketEntity;
@@ -19,6 +20,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -27,7 +29,7 @@ class IncidentTicketServiceTest {
     void create_mapsAndPersistsTicket() {
         IncidentTicketRepository repository = mock(IncidentTicketRepository.class);
         when(repository.save(any(IncidentTicketEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
-        IncidentTicketService service = new IncidentTicketService(repository, new IncidentTicketMapper());
+        IncidentTicketService service = new IncidentTicketService(repository, new IncidentTicketMapper(), properties());
 
         IncidentTicketResponse response = service.create(new CreateIncidentTicketRequest(" Payments-Api ", 4, " queue delay "));
         assertTrue(response.ticketId().startsWith("TKT-"));
@@ -44,7 +46,7 @@ class IncidentTicketServiceTest {
             Optional.of(new IncidentTicketEntity("TKT-9001", "identity-api", 3, "token issue", "OPEN"))
         );
         when(repository.findByTicketId(eq("TKT-9999"))).thenReturn(Optional.empty());
-        IncidentTicketService service = new IncidentTicketService(repository, new IncidentTicketMapper());
+        IncidentTicketService service = new IncidentTicketService(repository, new IncidentTicketMapper(), properties());
 
         IncidentTicketResponse response = service.getByTicketId("tkt-9001");
         assertEquals("TKT-9001", response.ticketId());
@@ -56,15 +58,14 @@ class IncidentTicketServiceTest {
     @Test
     void service_validatesInput() {
         IncidentTicketRepository repository = mock(IncidentTicketRepository.class);
-        IncidentTicketService service = new IncidentTicketService(repository, new IncidentTicketMapper());
+        IncidentTicketService service = new IncidentTicketService(repository, new IncidentTicketMapper(), properties());
 
         assertThrows(IllegalArgumentException.class, () -> service.create(null));
         assertThrows(IllegalArgumentException.class, () -> service.getByTicketId(null));
         assertThrows(IllegalArgumentException.class, () -> service.getByTicketId(" "));
-        assertThrows(IllegalArgumentException.class, () -> service.listByStatus(null, 0, 20));
-        assertThrows(IllegalArgumentException.class, () -> service.listByStatus(" ", 0, 20));
         assertThrows(IllegalArgumentException.class, () -> service.listByStatus("OPEN", -1, 20));
         assertThrows(IllegalArgumentException.class, () -> service.listByStatus("OPEN", 0, 0));
+        assertThrows(IllegalArgumentException.class, () -> service.listByStatus("OPEN", 0, 101));
         assertThrows(IllegalArgumentException.class, () -> service.searchByServiceAndMinSeverity(null, 1, 0, 20));
         assertThrows(IllegalArgumentException.class, () -> service.searchByServiceAndMinSeverity(" ", 1, 0, 20));
         assertThrows(IllegalArgumentException.class, () -> service.searchByServiceAndMinSeverity("payments-api", 0, 0, 20));
@@ -77,7 +78,7 @@ class IncidentTicketServiceTest {
     @Test
     void listByStatus_andSearchByServiceAndMinSeverity_mapPagedResults() {
         IncidentTicketRepository repository = mock(IncidentTicketRepository.class);
-        IncidentTicketService service = new IncidentTicketService(repository, new IncidentTicketMapper());
+        IncidentTicketService service = new IncidentTicketService(repository, new IncidentTicketMapper(), properties());
 
         when(repository.findByStatusOrderBySeverityDescTicketIdAsc(eq("OPEN"), any())).thenReturn(
             new PageImpl<>(
@@ -111,15 +112,49 @@ class IncidentTicketServiceTest {
     }
 
     @Test
+    void listByStatus_usesConfiguredDefaultStatusWhenMissing() {
+        IncidentTicketRepository repository = mock(IncidentTicketRepository.class);
+        IncidentOpsProperties customProperties = new IncidentOpsProperties(
+            new IncidentOpsProperties.Tickets("PENDING", 50),
+            new IncidentOpsProperties.Integrations(
+                new IncidentOpsProperties.Integrations.Redis("localhost", 6379),
+                new IncidentOpsProperties.Integrations.Rabbitmq("localhost", 5672)
+            ),
+            new IncidentOpsProperties.Security("k", "s")
+        );
+        IncidentTicketService service = new IncidentTicketService(repository, new IncidentTicketMapper(), customProperties);
+
+        when(repository.findByStatusOrderBySeverityDescTicketIdAsc(eq("PENDING"), any())).thenReturn(
+            new PageImpl<>(List.of(), PageRequest.of(0, 10), 0)
+        );
+
+        service.listByStatus(null, 0, 10);
+        service.listByStatus(" ", 0, 10);
+
+        verify(repository, times(2)).findByStatusOrderBySeverityDescTicketIdAsc(eq("PENDING"), any());
+    }
+
+    @Test
     void createAndFailForRollback_throwsAfterPersistAttempt() {
         IncidentTicketRepository repository = mock(IncidentTicketRepository.class);
         when(repository.save(any(IncidentTicketEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
-        IncidentTicketService service = new IncidentTicketService(repository, new IncidentTicketMapper());
+        IncidentTicketService service = new IncidentTicketService(repository, new IncidentTicketMapper(), properties());
 
         assertThrows(
             IllegalStateException.class,
             () -> service.createAndFailForRollback(new CreateIncidentTicketRequest("payments-api", 4, "db outage"))
         );
         verify(repository).save(any(IncidentTicketEntity.class));
+    }
+
+    private static IncidentOpsProperties properties() {
+        return new IncidentOpsProperties(
+            new IncidentOpsProperties.Tickets("OPEN", 100),
+            new IncidentOpsProperties.Integrations(
+                new IncidentOpsProperties.Integrations.Redis("localhost", 6379),
+                new IncidentOpsProperties.Integrations.Rabbitmq("localhost", 5672)
+            ),
+            new IncidentOpsProperties.Security("key", "secret")
+        );
     }
 }
