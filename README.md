@@ -117,3 +117,17 @@ INCIDENTOPS_SIGNING_SECRET=replace-me-too \
 SPRING_PROFILES_ACTIVE=prod \
 ./gradlew runIncidentApi
 ```
+
+Repository integration tests run against a real PostgreSQL container with no manual DB setup.
+
+Run:
+
+```bash
+./gradlew test --tests '*IncidentTicketRepositoryTestcontainersTest'
+```
+
+What happens:
+- Testcontainers starts PostgreSQL automatically.
+- Spring datasource and Flyway properties are injected dynamically.
+- Flyway migrations run inside that test database.
+- Repository tests execute against real Postgres behavior.
