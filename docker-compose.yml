@@ -5,6 +5,7 @@ services:
     working_dir: /workspace
     command: ["./gradlew", "--no-daemon", "runIncidentApi"]
     environment:
+      SPRING_PROFILES_ACTIVE: docker
       POSTGRES_HOST: postgres
       POSTGRES_PORT: 5432
       POSTGRES_DB: incidentops
@@ -12,6 +13,8 @@ services:
       POSTGRES_PASSWORD: incidentops
       REDIS_HOST: redis
       RABBITMQ_HOST: rabbitmq
+      INCIDENTOPS_API_KEY: compose-local-api-key
+      INCIDENTOPS_SIGNING_SECRET: compose-local-signing-secret
       SERVER_PORT: 8080
     volumes:
       - ./:/workspace

@@ -1,10 +1,12 @@
 package com.showoff.incidentops.springboot;
 
+import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.ConfigurableApplicationContext;
 
 @SpringBootApplication
+@ConfigurationPropertiesScan(basePackages = "com.showoff.incidentops.springboot")
 public class IncidentApiApplication {
     private static ConfigurableApplicationContext context;
 
