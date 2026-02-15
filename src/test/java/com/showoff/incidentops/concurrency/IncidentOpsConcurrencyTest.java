@@ -8,8 +8,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -21,14 +23,14 @@ class IncidentOpsConcurrencyTest {
     void dispatchNotifications_usesRunnableAndExecutorService() {
         ExecutorService executor = Executors.newFixedThreadPool(2);
         try {
-            List<String> delivered = new ArrayList<>();
+            List<String> delivered = new CopyOnWriteArrayList<>();
             int count = IncidentOpsConcurrency.dispatchNotifications(
                 List.of("inc-1001", " INC-1002 "),
                 executor,
                 delivered::add
             );
             assertEquals(2, count);
-            assertIterableEquals(List.of("INC-1001", "INC-1002"), delivered);
+            assertEquals(Set.of("INC-1001", "INC-1002"), Set.copyOf(delivered));
         } finally {
             executor.shutdownNow();
         }
