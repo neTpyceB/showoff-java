@@ -1,4 +1,4 @@
-package com.showoff;
+package com.showoff.incidentops.reliability;
 
 public class RunbookAccessException extends Exception {
     public RunbookAccessException(String message) {

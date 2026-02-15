@@ -1,4 +1,4 @@
-package com.showoff;
+package com.showoff.incidentops.functional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertIterableEquals;

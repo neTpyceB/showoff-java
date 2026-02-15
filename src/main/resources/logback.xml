@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration scan="true">
+    <property resource="logging.properties"/>
+    <property name="APP_NAME" value="${app.name:-showoff-app}"/>
+
+    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>${log.pattern:-%d{HH:mm:ss.SSS} %-5level [%thread] %logger{36} - %msg%n}</pattern>
+        </encoder>
+    </appender>
+
+    <logger name="com.showoff.incidentops" level="${incident.log.level:-DEBUG}"/>
+
+    <root level="${root.log.level:-INFO}">
+        <appender-ref ref="STDOUT"/>
+    </root>
+</configuration>
