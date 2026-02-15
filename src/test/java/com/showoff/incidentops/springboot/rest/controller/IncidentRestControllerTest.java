@@ -10,6 +10,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
@@ -101,8 +102,10 @@ class IncidentRestControllerTest {
     @Test
     void pathVariableConstraintViolation_returns400() throws Exception {
         GlobalApiExceptionHandler handler = new GlobalApiExceptionHandler();
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/v2/incidents/invalid");
         ResponseEntity<?> response = handler.handleConstraintViolation(
-            new ConstraintViolationException("incidentId must match INC-<digits>", java.util.Set.of())
+            new ConstraintViolationException("incidentId must match INC-<digits>", java.util.Set.of()),
+            request
         );
         assertEquals(400, response.getStatusCode().value());
         assertEquals("CONSTRAINT_VIOLATION", ((com.showoff.incidentops.springboot.rest.exception.ApiErrorResponse) response.getBody()).code());

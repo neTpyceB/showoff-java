@@ -15,6 +15,7 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
@@ -166,8 +167,10 @@ class IncidentTicketControllerTest {
     @Test
     void constraintViolationHandler_branchCovered() {
         GlobalApiExceptionHandler handler = new GlobalApiExceptionHandler();
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/v4/tickets/invalid");
         ResponseEntity<ApiErrorResponse> response = handler.handleConstraintViolation(
-            new ConstraintViolationException("ticketId must match TKT-<digits>", java.util.Set.of())
+            new ConstraintViolationException("ticketId must match TKT-<digits>", java.util.Set.of()),
+            request
         );
         assertEquals(400, response.getStatusCode().value());
         assertEquals("CONSTRAINT_VIOLATION", response.getBody().code());
