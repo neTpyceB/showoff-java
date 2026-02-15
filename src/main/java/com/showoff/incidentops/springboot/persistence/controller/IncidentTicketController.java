@@ -2,7 +2,8 @@ package com.showoff.incidentops.springboot.persistence.controller;
 
 import com.showoff.incidentops.springboot.persistence.dto.CreateIncidentTicketRequest;
 import com.showoff.incidentops.springboot.persistence.dto.IncidentTicketResponse;
-import com.showoff.incidentops.springboot.persistence.service.IncidentTicketService;
+import com.showoff.incidentops.springboot.persistence.service.IncidentTicketCommandService;
+import com.showoff.incidentops.springboot.persistence.service.IncidentTicketQueryService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -24,15 +25,20 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/v4/tickets")
 public class IncidentTicketController {
-    private final IncidentTicketService ticketService;
+    private final IncidentTicketCommandService commandService;
+    private final IncidentTicketQueryService queryService;
 
-    public IncidentTicketController(IncidentTicketService ticketService) {
-        this.ticketService = ticketService;
+    public IncidentTicketController(
+        IncidentTicketCommandService commandService,
+        IncidentTicketQueryService queryService
+    ) {
+        this.commandService = commandService;
+        this.queryService = queryService;
     }
 
     @PostMapping
     public ResponseEntity<IncidentTicketResponse> create(@Valid @RequestBody CreateIncidentTicketRequest request) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(ticketService.create(request));
+        return ResponseEntity.status(HttpStatus.CREATED).body(commandService.create(request));
     }
 
     @GetMapping("/{ticketId}")
@@ -41,7 +47,7 @@ public class IncidentTicketController {
         @Pattern(regexp = "TKT-\\d+", message = "ticketId must match TKT-<digits>")
         String ticketId
     ) {
-        return ticketService.getByTicketId(ticketId);
+        return queryService.getByTicketId(ticketId);
     }
 
     @GetMapping
@@ -57,7 +63,7 @@ public class IncidentTicketController {
         @Max(value = 100, message = "size must be <= 100")
         int size
     ) {
-        return ticketService.listByStatus(status, page, size);
+        return queryService.listByStatus(status, page, size);
     }
 
     @GetMapping("/search")
@@ -77,6 +83,6 @@ public class IncidentTicketController {
         @Max(value = 100, message = "size must be <= 100")
         int size
     ) {
-        return ticketService.searchByServiceAndMinSeverity(serviceId, minSeverity, page, size);
+        return queryService.searchByServiceAndMinSeverity(serviceId, minSeverity, page, size);
     }
 }

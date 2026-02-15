@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -224,15 +225,27 @@ class IncidentOpsConcurrencyTest {
         }
 
         ExecutorService interruptedWaitExecutor = Executors.newSingleThreadExecutor();
+        CountDownLatch notifierGate = new CountDownLatch(1);
         Thread.currentThread().interrupt();
         try {
             IllegalStateException interrupted = assertThrows(
                 IllegalStateException.class,
-                () -> IncidentOpsConcurrency.dispatchNotifications(List.of("INC-7001"), interruptedWaitExecutor, id -> {})
+                () -> IncidentOpsConcurrency.dispatchNotifications(
+                    List.of("INC-7001"),
+                    interruptedWaitExecutor,
+                    id -> {
+                        try {
+                            notifierGate.await();
+                        } catch (InterruptedException ex) {
+                            Thread.currentThread().interrupt();
+                        }
+                    }
+                )
             );
             assertTrue(interrupted.getCause() instanceof InterruptedException);
         } finally {
             Thread.interrupted();
+            notifierGate.countDown();
             interruptedWaitExecutor.shutdownNow();
         }
 
