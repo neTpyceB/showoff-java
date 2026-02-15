@@ -78,3 +78,10 @@ jacocoTestCoverageVerification {
 tasks.named('check') {
     dependsOn tasks.jacocoTestCoverageVerification
 }
+
+tasks.register('runIncidentApi', JavaExec) {
+    group = 'application'
+    description = 'Runs Spring Incident API application for local/dev containers.'
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass = 'com.showoff.incidentops.springboot.IncidentApiApplication'
+}
