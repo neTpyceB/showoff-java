@@ -60,6 +60,7 @@ class IncidentOpsLoggerTest {
         LogCapture capture = LogCapture.attach(logger, Level.DEBUG);
         try {
             assertEquals(25, IncidentOpsLogger.samplingRateOrDefault("25", 10));
+            assertEquals(10, IncidentOpsLogger.samplingRateOrDefault("-1", 10));
             assertEquals(10, IncidentOpsLogger.samplingRateOrDefault(null, 10));
             assertEquals(10, IncidentOpsLogger.samplingRateOrDefault(" ", 10));
             assertEquals(10, IncidentOpsLogger.samplingRateOrDefault("200", 10));
@@ -76,6 +77,7 @@ class IncidentOpsLoggerTest {
     @Test
     void loggerMethods_validateInput() {
         assertThrows(IllegalArgumentException.class, () -> IncidentOpsLogger.incidentOpened(" ", "payments-api"));
+        assertThrows(IllegalArgumentException.class, () -> IncidentOpsLogger.incidentOpened(null, "payments-api"));
         assertThrows(IllegalArgumentException.class, () -> IncidentOpsLogger.incidentOpened("INC-1", " "));
         assertThrows(IllegalArgumentException.class, () -> IncidentOpsLogger.incidentResolved(" ", 1));
         assertThrows(IllegalArgumentException.class, () -> IncidentOpsLogger.incidentResolved("INC-1", -1));

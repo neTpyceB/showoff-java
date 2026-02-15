@@ -116,11 +116,17 @@ class IncidentOpsHttpJsonClientTest {
             HttpClient client = HttpClient.newHttpClient();
             URI base = URI.create("http://localhost:" + server.getAddress().getPort());
             HttpRequest errorRequest = IncidentOpsHttpJsonClient.createGetRequest(base.resolve("/error"), TIMEOUT);
+            HttpRequest redirectRequest = IncidentOpsHttpJsonClient.createGetRequest(base.resolve("/redirect"), TIMEOUT);
 
             assertThrows(IllegalStateException.class, () -> IncidentOpsHttpJsonClient.sendSync(client, errorRequest));
+            assertThrows(IllegalStateException.class, () -> IncidentOpsHttpJsonClient.sendSync(client, redirectRequest));
             assertThrows(
                 CompletionException.class,
                 () -> IncidentOpsHttpJsonClient.sendAsync(client, errorRequest).join()
+            );
+            assertThrows(
+                CompletionException.class,
+                () -> IncidentOpsHttpJsonClient.sendAsync(client, redirectRequest).join()
             );
             assertThrows(
                 IllegalArgumentException.class,
@@ -137,6 +143,7 @@ class IncidentOpsHttpJsonClientTest {
         URI uri = URI.create("http://localhost/test");
         HttpClient failingIoClient = new ThrowingHttpClient(new IOException("io failure"), null);
         HttpClient failingInterruptedClient = new ThrowingHttpClient(null, new InterruptedException("interrupted"));
+        HttpClient informationalStatusClient = new FixedStatusHttpClient(199, "{\"status\":\"info\"}");
 
         assertThrows(IllegalArgumentException.class, () -> IncidentOpsHttpJsonClient.createGetRequest(null, TIMEOUT));
         assertThrows(IllegalArgumentException.class, () -> IncidentOpsHttpJsonClient.createGetRequest(uri, null));
@@ -146,16 +153,29 @@ class IncidentOpsHttpJsonClientTest {
         );
         assertThrows(
             IllegalArgumentException.class,
+            () -> IncidentOpsHttpJsonClient.createGetRequest(uri, Duration.ofSeconds(-1))
+        );
+        assertThrows(
+            IllegalArgumentException.class,
             () -> IncidentOpsHttpJsonClient.createPostRequest(uri, " ", TIMEOUT)
         );
         assertThrows(IllegalArgumentException.class, () -> IncidentOpsHttpJsonClient.sendSync(null, null));
         assertThrows(IllegalArgumentException.class, () -> IncidentOpsHttpJsonClient.sendAsync(null, null));
+        assertThrows(
+            IllegalArgumentException.class,
+            () -> IncidentOpsHttpJsonClient.sendSync(HttpClient.newHttpClient(), null)
+        );
+        assertThrows(
+            IllegalArgumentException.class,
+            () -> IncidentOpsHttpJsonClient.sendAsync(HttpClient.newHttpClient(), null)
+        );
         assertThrows(IllegalArgumentException.class, () -> IncidentOpsHttpJsonClient.toJson(null, mapper));
         assertThrows(IllegalArgumentException.class, () -> IncidentOpsHttpJsonClient.toJson(
             new IncidentOpsHttpJsonClient.IncidentPayload("INC-1", "payments-api", 3, "OPEN"),
             null
         ));
         assertThrows(IllegalArgumentException.class, () -> IncidentOpsHttpJsonClient.fromJson(" ", mapper));
+        assertThrows(IllegalArgumentException.class, () -> IncidentOpsHttpJsonClient.fromJson(null, mapper));
         assertThrows(IllegalArgumentException.class, () -> IncidentOpsHttpJsonClient.fromJson("{}", null));
         assertThrows(
             IllegalArgumentException.class,
@@ -189,6 +209,10 @@ class IncidentOpsHttpJsonClientTest {
         );
         assertThrows(
             IllegalArgumentException.class,
+            () -> new IncidentOpsHttpJsonClient.IncidentPayload("INC-1", "payments-api", 0, "OPEN")
+        );
+        assertThrows(
+            IllegalArgumentException.class,
             () -> new IncidentOpsHttpJsonClient.IncidentPayload("INC-1", "payments-api", 6, "OPEN")
         );
         assertThrows(
@@ -202,6 +226,14 @@ class IncidentOpsHttpJsonClientTest {
             () -> IncidentOpsHttpJsonClient.sendSync(failingIoClient, request)
         );
         assertInstanceOf(IOException.class, ioEx.getCause());
+        assertThrows(
+            IllegalStateException.class,
+            () -> IncidentOpsHttpJsonClient.sendSync(informationalStatusClient, request)
+        );
+        assertThrows(
+            CompletionException.class,
+            () -> IncidentOpsHttpJsonClient.sendAsync(informationalStatusClient, request).join()
+        );
 
         Thread.currentThread().interrupt();
         try {
@@ -216,11 +248,29 @@ class IncidentOpsHttpJsonClientTest {
         }
     }
 
+    @Test
+    void toJson_wrapsSerializationFailures() {
+        ObjectMapper failingMapper = new ObjectMapper() {
+            @Override
+            public String writeValueAsString(Object value) throws com.fasterxml.jackson.core.JsonProcessingException {
+                throw new com.fasterxml.jackson.core.JsonProcessingException("simulated serialization failure") {};
+            }
+        };
+        assertThrows(
+            IllegalArgumentException.class,
+            () -> IncidentOpsHttpJsonClient.toJson(
+                new IncidentOpsHttpJsonClient.IncidentPayload("INC-1", "payments-api", 3, "OPEN"),
+                failingMapper
+            )
+        );
+    }
+
     private static HttpServer startServer(AtomicReference<String> postedBody) throws IOException {
         HttpServer server = HttpServer.create(new InetSocketAddress("localhost", 0), 0);
         server.setExecutor(Executors.newCachedThreadPool());
         server.createContext("/incident", new JsonHandler(postedBody));
         server.createContext("/error", exchange -> writeResponse(exchange, 500, "{\"error\":\"boom\"}"));
+        server.createContext("/redirect", exchange -> writeResponse(exchange, 302, "{\"status\":\"redirect\"}"));
         server.createContext("/bad-json", exchange -> writeResponse(exchange, 200, "{invalid"));
         server.start();
         return server;
@@ -354,6 +404,153 @@ class IncidentOpsHttpJsonClientTest {
             HttpResponse.PushPromiseHandler<T> pushPromiseHandler
         ) {
             return CompletableFuture.failedFuture(new IOException("async push not supported in throwing stub"));
+        }
+    }
+
+    private static final class FixedStatusHttpClient extends HttpClient {
+        private final int statusCode;
+        private final String body;
+
+        private FixedStatusHttpClient(int statusCode, String body) {
+            this.statusCode = statusCode;
+            this.body = body;
+        }
+
+        @Override
+        public Optional<java.net.CookieHandler> cookieHandler() {
+            return Optional.empty();
+        }
+
+        @Override
+        public Optional<Duration> connectTimeout() {
+            return Optional.of(Duration.ofSeconds(1));
+        }
+
+        @Override
+        public Redirect followRedirects() {
+            return Redirect.NEVER;
+        }
+
+        @Override
+        public Optional<ProxySelector> proxy() {
+            return Optional.empty();
+        }
+
+        @Override
+        public SSLContext sslContext() {
+            try {
+                SSLContext context = SSLContext.getInstance("TLS");
+                context.init(null, new TrustManager[] {new X509TrustManager() {
+                    @Override
+                    public void checkClientTrusted(java.security.cert.X509Certificate[] chain, String authType) {}
+
+                    @Override
+                    public void checkServerTrusted(java.security.cert.X509Certificate[] chain, String authType) {}
+
+                    @Override
+                    public java.security.cert.X509Certificate[] getAcceptedIssuers() {
+                        return new java.security.cert.X509Certificate[0];
+                    }
+                }}, new SecureRandom());
+                return context;
+            } catch (Exception ex) {
+                throw new IllegalStateException(ex);
+            }
+        }
+
+        @Override
+        public SSLParameters sslParameters() {
+            return new SSLParameters();
+        }
+
+        @Override
+        public Optional<java.net.Authenticator> authenticator() {
+            return Optional.empty();
+        }
+
+        @Override
+        public Version version() {
+            return Version.HTTP_1_1;
+        }
+
+        @Override
+        public Optional<Executor> executor() {
+            return Optional.empty();
+        }
+
+        @Override
+        @SuppressWarnings("unchecked")
+        public <T> HttpResponse<T> send(HttpRequest req, HttpResponse.BodyHandler<T> responseBodyHandler) {
+            return new FixedStatusHttpResponse<>(statusCode, (T) body);
+        }
+
+        @Override
+        @SuppressWarnings("unchecked")
+        public <T> CompletableFuture<HttpResponse<T>> sendAsync(
+            HttpRequest req,
+            HttpResponse.BodyHandler<T> responseBodyHandler
+        ) {
+            return CompletableFuture.completedFuture(new FixedStatusHttpResponse<>(statusCode, (T) body));
+        }
+
+        @Override
+        @SuppressWarnings("unchecked")
+        public <T> CompletableFuture<HttpResponse<T>> sendAsync(
+            HttpRequest req,
+            HttpResponse.BodyHandler<T> responseBodyHandler,
+            HttpResponse.PushPromiseHandler<T> pushPromiseHandler
+        ) {
+            return CompletableFuture.completedFuture(new FixedStatusHttpResponse<>(statusCode, (T) body));
+        }
+    }
+
+    private static final class FixedStatusHttpResponse<T> implements HttpResponse<T> {
+        private final int statusCode;
+        private final T body;
+
+        private FixedStatusHttpResponse(int statusCode, T body) {
+            this.statusCode = statusCode;
+            this.body = body;
+        }
+
+        @Override
+        public int statusCode() {
+            return statusCode;
+        }
+
+        @Override
+        public HttpRequest request() {
+            return null;
+        }
+
+        @Override
+        public Optional<HttpResponse<T>> previousResponse() {
+            return Optional.empty();
+        }
+
+        @Override
+        public HttpHeaders headers() {
+            return HttpHeaders.of(java.util.Map.of(), (a, b) -> true);
+        }
+
+        @Override
+        public T body() {
+            return body;
+        }
+
+        @Override
+        public Optional<javax.net.ssl.SSLSession> sslSession() {
+            return Optional.empty();
+        }
+
+        @Override
+        public URI uri() {
+            return URI.create("http://localhost/fixed");
+        }
+
+        @Override
+        public HttpClient.Version version() {
+            return HttpClient.Version.HTTP_1_1;
         }
     }
 }

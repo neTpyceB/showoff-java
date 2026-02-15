@@ -26,12 +26,17 @@ dependencies {
     implementation 'com.fasterxml.jackson.core:jackson-databind:2.18.2'
     implementation 'org.springframework.boot:spring-boot-starter-web:4.0.2'
     implementation 'org.springframework.boot:spring-boot-starter-validation:4.0.2'
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa:4.0.2'
+    implementation 'org.springframework.boot:spring-boot-flyway:4.0.2'
+    runtimeOnly 'org.flywaydb:flyway-database-postgresql:11.17.1'
     runtimeOnly 'ch.qos.logback:logback-classic:1.5.18'
+    runtimeOnly 'org.postgresql:postgresql:42.7.8'
 
     testImplementation platform('org.junit:junit-bom:6.0.2')
     testImplementation 'org.junit.jupiter:junit-jupiter'
     testImplementation 'org.springframework.boot:spring-boot-starter-test:4.0.2'
     testImplementation 'ch.qos.logback:logback-classic:1.5.18'
+    testRuntimeOnly 'com.h2database:h2:2.4.240'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 

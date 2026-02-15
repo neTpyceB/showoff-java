@@ -38,6 +38,17 @@ class IncidentServiceTest {
     void service_validatesInput() {
         IncidentService service = new IncidentService();
         assertThrows(IllegalArgumentException.class, () -> service.getIncident(" "));
+        assertThrows(IllegalArgumentException.class, () -> service.getIncident(null));
         assertThrows(IllegalArgumentException.class, () -> service.createIncident(null));
+    }
+
+    @Test
+    void incidentRequest_validatesBoundsAndRequiredFields() {
+        assertThrows(IllegalArgumentException.class, () -> new IncidentRequest(null, 3, "summary"));
+        assertThrows(IllegalArgumentException.class, () -> new IncidentRequest(" ", 3, "summary"));
+        assertThrows(IllegalArgumentException.class, () -> new IncidentRequest("payments-api", 3, null));
+        assertThrows(IllegalArgumentException.class, () -> new IncidentRequest("payments-api", 3, " "));
+        assertThrows(IllegalArgumentException.class, () -> new IncidentRequest("payments-api", 0, "summary"));
+        assertThrows(IllegalArgumentException.class, () -> new IncidentRequest("payments-api", 6, "summary"));
     }
 }

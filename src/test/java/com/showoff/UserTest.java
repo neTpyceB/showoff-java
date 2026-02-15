@@ -29,6 +29,7 @@ class UserTest {
         User c = new User("Alice", 31);
 
         assertEquals(a1, a2);
+        assertEquals(a1, a1);
         assertEquals(a1.hashCode(), a2.hashCode());
         assertNotEquals(a1, b);
         assertNotEquals(a1, c);

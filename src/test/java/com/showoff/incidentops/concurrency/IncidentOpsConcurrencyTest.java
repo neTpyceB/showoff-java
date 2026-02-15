@@ -57,6 +57,14 @@ class IncidentOpsConcurrencyTest {
                 () -> IncidentOpsConcurrency.dispatchNotifications(new ArrayList<>(List.of(" ")), executor, id -> {})
             );
             assertThrows(
+                IllegalArgumentException.class,
+                () -> {
+                    List<String> ids = new ArrayList<>(List.of("INC-1"));
+                    ids.add(null);
+                    IncidentOpsConcurrency.dispatchNotifications(ids, executor, id -> {});
+                }
+            );
+            assertThrows(
                 IllegalStateException.class,
                 () -> IncidentOpsConcurrency.dispatchNotifications(List.of("INC-1"), executor, id -> {
                     throw new IllegalArgumentException("simulated notifier failure");
@@ -108,6 +116,19 @@ class IncidentOpsConcurrencyTest {
                     throw new IllegalArgumentException("simulated task failure");
                 }), executor)
             );
+            Thread.currentThread().interrupt();
+            try {
+                IllegalStateException interrupted = assertThrows(
+                    IllegalStateException.class,
+                    () -> IncidentOpsConcurrency.runComputations(List.of(() -> {
+                        TimeUnit.SECONDS.sleep(1);
+                        return 1;
+                    }), executor)
+                );
+                assertTrue(interrupted.getCause() instanceof InterruptedException);
+            } finally {
+                Thread.interrupted();
+            }
         } finally {
             executor.shutdownNow();
         }
@@ -200,6 +221,19 @@ class IncidentOpsConcurrencyTest {
         } finally {
             Thread.interrupted();
             interruptedExecutor.shutdownNow();
+        }
+
+        ExecutorService interruptedWaitExecutor = Executors.newSingleThreadExecutor();
+        Thread.currentThread().interrupt();
+        try {
+            IllegalStateException interrupted = assertThrows(
+                IllegalStateException.class,
+                () -> IncidentOpsConcurrency.dispatchNotifications(List.of("INC-7001"), interruptedWaitExecutor, id -> {})
+            );
+            assertTrue(interrupted.getCause() instanceof InterruptedException);
+        } finally {
+            Thread.interrupted();
+            interruptedWaitExecutor.shutdownNow();
         }
 
         assertThrows(

@@ -26,6 +26,10 @@ class IncidentOpsOptionalsTest {
         assertThrows(IllegalArgumentException.class, () -> IncidentOpsOptionals.findPagerChannel(null, "payments-api"));
         assertThrows(
             IllegalArgumentException.class,
+            () -> IncidentOpsOptionals.findPagerChannel(new LinkedHashMap<>(), null)
+        );
+        assertThrows(
+            IllegalArgumentException.class,
             () -> IncidentOpsOptionals.findPagerChannel(new LinkedHashMap<>(), " ")
         );
     }
@@ -63,6 +67,10 @@ class IncidentOpsOptionalsTest {
         assertEquals(
             "#payments",
             IncidentOpsOptionals.pagerChannelOrComputedDefault(Optional.of("#payments"), "payments-api")
+        );
+        assertEquals(
+            "#alerts-payments-api",
+            IncidentOpsOptionals.pagerChannelOrComputedDefault(Optional.of(" "), "Payments-Api")
         );
         assertEquals(
             "#alerts-payments-api",
@@ -161,7 +169,7 @@ class IncidentOpsOptionalsTest {
 
     @Test
     void buildNotificationTargets_usesOptionalStreamAndIfPresent() {
-        List<String> ownerChannels = new ArrayList<>(List.of(" #Payments ", "#platform", "#payments"));
+        List<String> ownerChannels = new ArrayList<>(List.of(" #Payments ", " ", "#platform", "#payments"));
         assertEquals(
             List.of("#payments", "#platform"),
             IncidentOpsOptionals.buildNotificationTargets(Optional.of(ownerChannels), Optional.of("#incident-command"))
