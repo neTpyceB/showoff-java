@@ -6,7 +6,8 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 public record IncidentOpsProperties(
     Tickets tickets,
     Integrations integrations,
-    Security security
+    Security security,
+    Messaging messaging
 ) {
     public record Tickets(String defaultStatus, int maxPageSize) {}
 
@@ -17,4 +18,8 @@ public record IncidentOpsProperties(
     }
 
     public record Security(String apiKey, String signingSecret) {}
+
+    public record Messaging(Kafka kafka) {
+        public record Kafka(String topic, String groupId) {}
+    }
 }

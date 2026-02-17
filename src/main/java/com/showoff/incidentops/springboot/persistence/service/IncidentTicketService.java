@@ -7,6 +7,10 @@ import com.showoff.incidentops.springboot.persistence.entity.IncidentTicketEntit
 import com.showoff.incidentops.springboot.persistence.exception.IncidentTicketNotFoundException;
 import com.showoff.incidentops.springboot.persistence.mapper.IncidentTicketMapper;
 import com.showoff.incidentops.springboot.persistence.repository.IncidentTicketRepository;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.CachePut;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
@@ -16,6 +20,10 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 @Service
 public class IncidentTicketService implements IncidentTicketCommandService, IncidentTicketQueryService {
+    static final String CACHE_TICKET_BY_ID = "ticketsById";
+    static final String CACHE_STATUS_PAGES = "ticketPagesByStatus";
+    static final String CACHE_SERVICE_SEARCH_PAGES = "ticketPagesByServiceSeverity";
+
     private final IncidentTicketRepository repository;
     private final IncidentTicketMapper mapper;
     private final IncidentOpsProperties properties;
@@ -33,6 +41,13 @@ public class IncidentTicketService implements IncidentTicketCommandService, Inci
 
     @Override
     @Transactional
+    @Caching(
+        put = {@CachePut(cacheNames = CACHE_TICKET_BY_ID, key = "#result.ticketId()")},
+        evict = {
+            @CacheEvict(cacheNames = CACHE_STATUS_PAGES, allEntries = true),
+            @CacheEvict(cacheNames = CACHE_SERVICE_SEARCH_PAGES, allEntries = true)
+        }
+    )
     public IncidentTicketResponse create(CreateIncidentTicketRequest request) {
         if (request == null) {
             throw new IllegalArgumentException("request must not be null");
@@ -43,6 +58,7 @@ public class IncidentTicketService implements IncidentTicketCommandService, Inci
 
     @Override
     @Transactional(readOnly = true)
+    @Cacheable(cacheNames = CACHE_TICKET_BY_ID, key = "#p0.trim().toUpperCase()")
     public IncidentTicketResponse getByTicketId(String ticketId) {
         validateTicketId(ticketId);
         IncidentTicketEntity entity = repository.findByTicketId(ticketId.trim().toUpperCase())
@@ -54,6 +70,7 @@ public class IncidentTicketService implements IncidentTicketCommandService, Inci
 
     @Override
     @Transactional(readOnly = true)
+    @Cacheable(cacheNames = CACHE_STATUS_PAGES, key = "#root.target.statusPageKey(#p0, #p1, #p2)")
     public Page<IncidentTicketResponse> listByStatus(String status, int page, int size) {
         String effectiveStatus = normalizeStatusOrDefault(status);
         validateNonBlank(effectiveStatus, "status");
@@ -66,6 +83,7 @@ public class IncidentTicketService implements IncidentTicketCommandService, Inci
 
     @Override
     @Transactional(readOnly = true)
+    @Cacheable(cacheNames = CACHE_SERVICE_SEARCH_PAGES, key = "#root.target.serviceSearchKey(#p0, #p1, #p2, #p3)")
     public Page<IncidentTicketResponse> searchByServiceAndMinSeverity(
         String serviceId,
         int minSeverity,
@@ -82,6 +100,26 @@ public class IncidentTicketService implements IncidentTicketCommandService, Inci
             minSeverity,
             PageRequest.of(page, size)
         ).map(mapper::toResponse);
+    }
+
+    @Override
+    @Transactional
+    @Caching(
+        put = {@CachePut(cacheNames = CACHE_TICKET_BY_ID, key = "#result.ticketId()")},
+        evict = {
+            @CacheEvict(cacheNames = CACHE_STATUS_PAGES, allEntries = true),
+            @CacheEvict(cacheNames = CACHE_SERVICE_SEARCH_PAGES, allEntries = true)
+        }
+    )
+    public IncidentTicketResponse updateStatus(String ticketId, String status) {
+        validateTicketId(ticketId);
+        validateNonBlank(status, "status");
+        IncidentTicketEntity entity = repository.findByTicketId(ticketId.trim().toUpperCase())
+            .orElseThrow(() -> new IncidentTicketNotFoundException(
+                "ticket not found: " + ticketId.trim().toUpperCase()
+            ));
+        entity.setStatus(status.trim().toUpperCase());
+        return mapper.toResponse(repository.save(entity));
     }
 
     @Override
@@ -121,5 +159,15 @@ public class IncidentTicketService implements IncidentTicketCommandService, Inci
             return properties.tickets().defaultStatus();
         }
         return status;
+    }
+
+    String statusPageKey(String status, int page, int size) {
+        String effectiveStatus = normalizeStatusOrDefault(status).trim().toUpperCase();
+        return effectiveStatus + ":" + page + ":" + size;
+    }
+
+    String serviceSearchKey(String serviceId, int minSeverity, int page, int size) {
+        String normalizedService = serviceId == null ? "null" : serviceId.trim().toLowerCase();
+        return normalizedService + ":" + minSeverity + ":" + page + ":" + size;
     }
 }

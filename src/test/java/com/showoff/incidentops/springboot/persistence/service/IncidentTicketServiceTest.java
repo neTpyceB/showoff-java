@@ -56,6 +56,23 @@ class IncidentTicketServiceTest {
     }
 
     @Test
+    void updateStatus_updatesEntityAndReturnsMappedResponse() {
+        IncidentTicketRepository repository = mock(IncidentTicketRepository.class);
+        IncidentTicketEntity existing = new IncidentTicketEntity("TKT-9010", "payments-api", 4, "queue delay", "OPEN");
+        when(repository.findByTicketId(eq("TKT-9010"))).thenReturn(Optional.of(existing));
+        when(repository.save(any(IncidentTicketEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        IncidentTicketService service = new IncidentTicketService(repository, new IncidentTicketMapper(), properties());
+
+        IncidentTicketResponse updated = service.updateStatus("tkt-9010", "resolved");
+        assertEquals("TKT-9010", updated.ticketId());
+        assertEquals("RESOLVED", updated.status());
+
+        assertThrows(IllegalArgumentException.class, () -> service.updateStatus(" ", "OPEN"));
+        assertThrows(IllegalArgumentException.class, () -> service.updateStatus("TKT-9010", " "));
+        assertThrows(IncidentTicketNotFoundException.class, () -> service.updateStatus("TKT-9999", "OPEN"));
+    }
+
+    @Test
     void service_validatesInput() {
         IncidentTicketRepository repository = mock(IncidentTicketRepository.class);
         IncidentTicketService service = new IncidentTicketService(repository, new IncidentTicketMapper(), properties());
@@ -120,7 +137,10 @@ class IncidentTicketServiceTest {
                 new IncidentOpsProperties.Integrations.Redis("localhost", 6379),
                 new IncidentOpsProperties.Integrations.Rabbitmq("localhost", 5672)
             ),
-            new IncidentOpsProperties.Security("k", "s")
+            new IncidentOpsProperties.Security("k", "s"),
+            new IncidentOpsProperties.Messaging(
+                new IncidentOpsProperties.Messaging.Kafka("incident-events-test", "incidentops-test")
+            )
         );
         IncidentTicketService service = new IncidentTicketService(repository, new IncidentTicketMapper(), customProperties);
 
@@ -147,6 +167,17 @@ class IncidentTicketServiceTest {
         verify(repository).save(any(IncidentTicketEntity.class));
     }
 
+    @Test
+    void cacheKeys_areBuiltFromNormalizedInputs() {
+        IncidentTicketRepository repository = mock(IncidentTicketRepository.class);
+        IncidentTicketService service = new IncidentTicketService(repository, new IncidentTicketMapper(), properties());
+
+        assertEquals("OPEN:0:20", service.statusPageKey(null, 0, 20));
+        assertEquals("OPEN:1:5", service.statusPageKey(" open ", 1, 5));
+        assertEquals("payments-api:4:0:10", service.serviceSearchKey(" Payments-Api ", 4, 0, 10));
+        assertEquals("null:2:0:10", service.serviceSearchKey(null, 2, 0, 10));
+    }
+
     private static IncidentOpsProperties properties() {
         return new IncidentOpsProperties(
             new IncidentOpsProperties.Tickets("OPEN", 100),
@@ -154,7 +185,10 @@ class IncidentTicketServiceTest {
                 new IncidentOpsProperties.Integrations.Redis("localhost", 6379),
                 new IncidentOpsProperties.Integrations.Rabbitmq("localhost", 5672)
             ),
-            new IncidentOpsProperties.Security("key", "secret")
+            new IncidentOpsProperties.Security("key", "secret"),
+            new IncidentOpsProperties.Messaging(
+                new IncidentOpsProperties.Messaging.Kafka("incident-events-test", "incidentops-test")
+            )
         );
     }
 }

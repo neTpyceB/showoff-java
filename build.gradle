@@ -27,6 +27,9 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-web:4.0.2'
     implementation 'org.springframework.boot:spring-boot-starter-validation:4.0.2'
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa:4.0.2'
+    implementation 'org.springframework.boot:spring-boot-starter-cache:4.0.2'
+    implementation 'org.springframework.boot:spring-boot-starter-data-redis:4.0.2'
+    implementation 'org.springframework.boot:spring-boot-starter-kafka:4.0.2'
     implementation 'org.springframework.boot:spring-boot-flyway:4.0.2'
     runtimeOnly 'org.flywaydb:flyway-database-postgresql:11.17.1'
     runtimeOnly 'ch.qos.logback:logback-classic:1.5.18'
@@ -36,6 +39,7 @@ dependencies {
     testImplementation platform('org.testcontainers:testcontainers-bom:1.20.4')
     testImplementation 'org.junit.jupiter:junit-jupiter'
     testImplementation 'org.springframework.boot:spring-boot-starter-test:4.0.2'
+    testImplementation 'org.springframework.kafka:spring-kafka-test:4.0.1'
     testImplementation 'org.testcontainers:junit-jupiter'
     testImplementation 'org.testcontainers:postgresql'
     testImplementation 'ch.qos.logback:logback-classic:1.5.18'

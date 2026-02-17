@@ -24,5 +24,7 @@ class IncidentOpsPropertiesTest {
         assertEquals(5672, properties.integrations().rabbitmq().port());
         assertEquals("test-api-key", properties.security().apiKey());
         assertEquals("test-signing-secret", properties.security().signingSecret());
+        assertEquals("incident-events-test", properties.messaging().kafka().topic());
+        assertEquals("incidentops-test", properties.messaging().kafka().groupId());
     }
 }

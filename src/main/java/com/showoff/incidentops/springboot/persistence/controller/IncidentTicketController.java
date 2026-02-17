@@ -2,6 +2,7 @@ package com.showoff.incidentops.springboot.persistence.controller;
 
 import com.showoff.incidentops.springboot.persistence.dto.CreateIncidentTicketRequest;
 import com.showoff.incidentops.springboot.persistence.dto.IncidentTicketResponse;
+import com.showoff.incidentops.springboot.persistence.dto.UpdateIncidentTicketStatusRequest;
 import com.showoff.incidentops.springboot.persistence.service.IncidentTicketCommandService;
 import com.showoff.incidentops.springboot.persistence.service.IncidentTicketQueryService;
 import jakarta.validation.Valid;
@@ -15,6 +16,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -39,6 +41,16 @@ public class IncidentTicketController {
     @PostMapping
     public ResponseEntity<IncidentTicketResponse> create(@Valid @RequestBody CreateIncidentTicketRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(commandService.create(request));
+    }
+
+    @PatchMapping("/{ticketId}/status")
+    public IncidentTicketResponse updateStatus(
+        @PathVariable("ticketId")
+        @Pattern(regexp = "TKT-\\d+", message = "ticketId must match TKT-<digits>")
+        String ticketId,
+        @Valid @RequestBody UpdateIncidentTicketStatusRequest request
+    ) {
+        return commandService.updateStatus(ticketId, request.status());
     }
 
     @GetMapping("/{ticketId}")

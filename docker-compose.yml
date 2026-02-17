@@ -13,6 +13,9 @@ services:
       POSTGRES_PASSWORD: incidentops
       REDIS_HOST: redis
       RABBITMQ_HOST: rabbitmq
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      INCIDENTOPS_KAFKA_TOPIC: incident-events
+      INCIDENTOPS_KAFKA_GROUP_ID: incidentops-docker
       INCIDENTOPS_API_KEY: compose-local-api-key
       INCIDENTOPS_SIGNING_SECRET: compose-local-signing-secret
       SERVER_PORT: 8080
@@ -24,6 +27,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      kafka:
+        condition: service_started
       redis:
         condition: service_started
       rabbitmq:
@@ -67,6 +72,25 @@ services:
     ports:
       - "5672:5672"
       - "15672:15672"
+    restart: unless-stopped
+    networks:
+      - incidentops_net
+
+  kafka:
+    image: bitnami/kafka:3.9
+    container_name: showoff-java-kafka
+    environment:
+      KAFKA_CFG_NODE_ID: 1
+      KAFKA_CFG_PROCESS_ROLES: broker,controller
+      KAFKA_CFG_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
+      KAFKA_CFG_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      KAFKA_CFG_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_CFG_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE: "true"
+      ALLOW_PLAINTEXT_LISTENER: "yes"
+    ports:
+      - "9092:9092"
     restart: unless-stopped
     networks:
       - incidentops_net
