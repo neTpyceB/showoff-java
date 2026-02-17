@@ -131,3 +131,48 @@ What happens:
 - Spring datasource and Flyway properties are injected dynamically.
 - Flyway migrations run inside that test database.
 - Repository tests execute against real Postgres behavior.
+
+Caching is enabled through Spring Cache abstraction.
+
+- In `docker` and `prod` profiles: `spring.cache.type=redis`
+- In tests/dev: `spring.cache.type=simple`
+
+Cached operations:
+- `IncidentTicketService#getByTicketId` uses cache `ticketsById`
+- paginated status reads use cache `ticketPagesByStatus`
+- service/severity search uses cache `ticketPagesByServiceSeverity`
+
+Eviction and refresh:
+- `create` clears page/search caches and puts created ticket into `ticketsById`
+- `updateStatus` clears page/search caches and refreshes `ticketsById`
+
+Quick check:
+
+```bash
+docker compose up -d
+curl -sS -X POST http://localhost:8080/api/v4/tickets \
+  -H "Content-Type: application/json" \
+  -d '{"serviceId":"payments-api","severity":4,"summary":"queue delay"}'
+curl -sS http://localhost:8080/api/v4/tickets/TKT-5001
+curl -sS http://localhost:8080/api/v4/tickets/TKT-5001
+```
+
+Kafka messaging basics:
+
+- Producer endpoint:
+`POST /api/v5/events/incidents/created`
+- Consumer:
+`IncidentEventConsumer` with `@KafkaListener`
+
+Example publish call:
+
+```bash
+curl -sS -X POST http://localhost:8080/api/v5/events/incidents/created \
+  -H "Content-Type: application/json" \
+  -d '{"incidentId":"inc-7001","serviceId":"payments-api","severity":4}'
+```
+
+Docker profile already wires Kafka via:
+- `KAFKA_BOOTSTRAP_SERVERS=kafka:9092`
+- `INCIDENTOPS_KAFKA_TOPIC=incident-events`
+- `INCIDENTOPS_KAFKA_GROUP_ID=incidentops-docker`

@@ -6,5 +6,7 @@ import com.showoff.incidentops.springboot.persistence.dto.IncidentTicketResponse
 public interface IncidentTicketCommandService {
     IncidentTicketResponse create(CreateIncidentTicketRequest request);
 
+    IncidentTicketResponse updateStatus(String ticketId, String status);
+
     void createAndFailForRollback(CreateIncidentTicketRequest request);
 }

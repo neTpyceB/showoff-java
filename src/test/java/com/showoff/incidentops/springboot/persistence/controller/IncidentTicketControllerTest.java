@@ -2,6 +2,7 @@ package com.showoff.incidentops.springboot.persistence.controller;
 
 import com.showoff.incidentops.springboot.persistence.dto.CreateIncidentTicketRequest;
 import com.showoff.incidentops.springboot.persistence.dto.IncidentTicketResponse;
+import com.showoff.incidentops.springboot.persistence.dto.UpdateIncidentTicketStatusRequest;
 import com.showoff.incidentops.springboot.persistence.exception.IncidentTicketNotFoundException;
 import com.showoff.incidentops.springboot.persistence.service.IncidentTicketCommandService;
 import com.showoff.incidentops.springboot.persistence.service.IncidentTicketQueryService;
@@ -28,6 +29,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -74,6 +76,24 @@ class IncidentTicketControllerTest {
             .andExpect(status().isCreated())
             .andExpect(jsonPath("$.ticketId").value("TKT-7001"))
             .andExpect(jsonPath("$.serviceId").value("payments-api"));
+    }
+
+    @Test
+    void updateStatus_returnsUpdatedTicketResponse() throws Exception {
+        when(commandService.updateStatus(eq("TKT-7001"), eq("resolved"))).thenReturn(
+            new IncidentTicketResponse("TKT-7001", "payments-api", 4, "queue delay", "RESOLVED")
+        );
+
+        mvc.perform(patch("/api/v4/tickets/TKT-7001/status")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "status": "resolved"
+                    }
+                    """))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.ticketId").value("TKT-7001"))
+            .andExpect(jsonPath("$.status").value("RESOLVED"));
     }
 
     @Test
@@ -143,6 +163,17 @@ class IncidentTicketControllerTest {
             .andExpect(jsonPath("$.details.serviceId").exists())
             .andExpect(jsonPath("$.details.severity").exists())
             .andExpect(jsonPath("$.details.summary").exists());
+
+        mvc.perform(patch("/api/v4/tickets/TKT-7001/status")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "status": " "
+                    }
+                    """))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
+            .andExpect(jsonPath("$.details.status").exists());
     }
 
     @Test
