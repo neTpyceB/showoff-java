@@ -176,3 +176,29 @@ Docker profile already wires Kafka via:
 - `KAFKA_BOOTSTRAP_SERVERS=kafka:9092`
 - `INCIDENTOPS_KAFKA_TOPIC=incident-events`
 - `INCIDENTOPS_KAFKA_GROUP_ID=incidentops-docker`
+
+Async processing patterns:
+
+- Custom executor bean: `incidentOpsAsyncExecutor`
+- Config prefix: `incidentops.async.executor.*`
+- Async controller: `/api/v6/async/incidents`
+
+Queue background audit task:
+
+```bash
+curl -sS -X POST http://localhost:8080/api/v6/async/incidents/INC-8801/audits \
+  -H "Content-Type: application/json" \
+  -d '{"requestedBy":"sre.oncall","reason":"trigger post-incident audit"}'
+```
+
+Async impact score calculation:
+
+```bash
+curl -sS "http://localhost:8080/api/v6/async/incidents/INC-8801/impact-score?severity=4"
+```
+
+Environment variables (optional overrides):
+- `INCIDENTOPS_ASYNC_CORE_POOL_SIZE`
+- `INCIDENTOPS_ASYNC_MAX_POOL_SIZE`
+- `INCIDENTOPS_ASYNC_QUEUE_CAPACITY`
+- `INCIDENTOPS_ASYNC_THREAD_NAME_PREFIX`
