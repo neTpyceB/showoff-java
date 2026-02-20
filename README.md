@@ -243,3 +243,39 @@ Build and verify:
 ./gradlew clean check
 ./gradlew runIncidentApi
 ```
+
+Production packaging + deployment:
+
+Build runnable JAR artifact:
+
+```bash
+./gradlew :api:bootJar
+ls -lh api/build/libs/incident-api.jar
+```
+
+Build container image:
+
+```bash
+docker build -t showoff-java-app:local .
+```
+
+Run full local environment (app + dependencies):
+
+```bash
+docker compose up -d --build
+docker compose ps
+docker compose logs -f app
+```
+
+Health check (Actuator):
+
+```bash
+curl -sS http://localhost:8080/actuator/health
+```
+
+Packaging practices applied:
+- Immutable image: app runs from built JAR inside image.
+- Externalized config: env vars only, no hardcoded environment secrets.
+- Logs to stdout: containerized app writes logs to container output.
+- One process per container: single Java process in app container.
+- No local filesystem dependency: app container no longer bind-mounts source.

@@ -121,3 +121,9 @@ tasks.register('runIncidentApi', JavaExec) {
     classpath = project(':api').sourceSets.main.runtimeClasspath
     mainClass = 'com.showoff.incidentops.springboot.IncidentApiApplication'
 }
+
+tasks.register('buildIncidentApiJar') {
+    group = 'build'
+    description = 'Builds runnable Spring Boot JAR for API module.'
+    dependsOn ':api:bootJar'
+}

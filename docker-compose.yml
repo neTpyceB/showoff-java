@@ -1,9 +1,10 @@
 services:
   app:
-    image: gradle:9.3.1-jdk21
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: showoff-java-app:local
     container_name: showoff-java-app
-    working_dir: /workspace
-    command: ["./gradlew", "--no-daemon", "runIncidentApi"]
     environment:
       SPRING_PROFILES_ACTIVE: docker
       POSTGRES_HOST: postgres
@@ -19,11 +20,15 @@ services:
       INCIDENTOPS_API_KEY: compose-local-api-key
       INCIDENTOPS_SIGNING_SECRET: compose-local-signing-secret
       SERVER_PORT: 8080
-    volumes:
-      - ./:/workspace
-      - gradle_cache:/home/gradle/.gradle
+      MANAGEMENT_TRACING_SAMPLING_PROBABILITY: 1.0
     ports:
       - "8080:8080"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O - http://localhost:8080/actuator/health | grep -q '\"status\":\"UP\"'"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
     depends_on:
       postgres:
         condition: service_healthy
@@ -97,7 +102,6 @@ services:
 
 volumes:
   postgres_data:
-  gradle_cache:
 
 networks:
   incidentops_net:
