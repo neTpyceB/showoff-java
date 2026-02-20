@@ -7,6 +7,32 @@ plugins {
 group = 'com.showoff'
 version = '0.1.0'
 
+allprojects {
+    group = 'com.showoff'
+    version = '0.1.0'
+
+    repositories {
+        mavenCentral()
+    }
+}
+
+subprojects {
+    plugins.withId('java') {
+        java {
+            toolchain {
+                languageVersion = JavaLanguageVersion.of(21)
+            }
+        }
+    }
+    plugins.withId('java-library') {
+        java {
+            toolchain {
+                languageVersion = JavaLanguageVersion.of(21)
+            }
+        }
+    }
+}
+
 java {
     toolchain {
         languageVersion = JavaLanguageVersion.of(21)
@@ -17,11 +43,12 @@ application {
     mainClass = 'com.showoff.App'
 }
 
-repositories {
-    mavenCentral()
-}
-
 dependencies {
+    testImplementation project(':api')
+    testImplementation project(':service')
+    testImplementation project(':persistence')
+    testImplementation project(':common')
+
     implementation 'org.slf4j:slf4j-api:2.0.16'
     implementation 'com.fasterxml.jackson.core:jackson-databind:2.18.2'
     implementation 'org.springframework.boot:spring-boot-starter-web:4.0.2'
@@ -90,6 +117,7 @@ tasks.named('check') {
 tasks.register('runIncidentApi', JavaExec) {
     group = 'application'
     description = 'Runs Spring Incident API application for local/dev containers.'
-    classpath = sourceSets.main.runtimeClasspath
+    dependsOn ':api:classes'
+    classpath = project(':api').sourceSets.main.runtimeClasspath
     mainClass = 'com.showoff.incidentops.springboot.IncidentApiApplication'
 }

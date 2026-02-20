@@ -229,3 +229,17 @@ Then check metric names:
 ```bash
 curl -sS http://localhost:8080/actuator/metrics
 ```
+
+Modularized structure (multi-module):
+
+- `api`: Spring Boot entrypoint, controllers, web pipeline/config, exception handler.
+- `service`: business logic, service layer, mappers, domain workflows.
+- `persistence`: JPA entities, repositories, migration resources.
+- `common`: shared configuration and shared DTO contracts used across modules.
+
+Build and verify:
+
+```bash
+./gradlew clean check
+./gradlew runIncidentApi
+```
