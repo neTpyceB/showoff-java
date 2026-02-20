@@ -1,0 +1,11 @@
+plugins {
+    id 'java-library'
+}
+
+dependencies {
+    implementation project(':common')
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa:4.0.2'
+    implementation 'org.springframework.boot:spring-boot-flyway:4.0.2'
+    runtimeOnly 'org.flywaydb:flyway-database-postgresql:11.17.1'
+    runtimeOnly 'org.postgresql:postgresql:42.7.8'
+}
