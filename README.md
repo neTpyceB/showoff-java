@@ -202,3 +202,30 @@ Environment variables (optional overrides):
 - `INCIDENTOPS_ASYNC_MAX_POOL_SIZE`
 - `INCIDENTOPS_ASYNC_QUEUE_CAPACITY`
 - `INCIDENTOPS_ASYNC_THREAD_NAME_PREFIX`
+
+Observability (Actuator + metrics + tracing):
+
+- Actuator endpoints exposed: `health`, `info`, `metrics`
+- Processing endpoint: `POST /api/v7/observability/incidents/{incidentId}/process`
+- Custom metrics:
+  - `incidentops.incident.processed` (counter)
+  - `incidentops.incident.failed` (counter)
+  - `incidentops.incident.processing` (timer)
+
+Health check:
+
+```bash
+curl -sS http://localhost:8080/actuator/health
+```
+
+Trigger processing (success path):
+
+```bash
+curl -sS -X POST "http://localhost:8080/api/v7/observability/incidents/INC-9101/process?severity=4"
+```
+
+Then check metric names:
+
+```bash
+curl -sS http://localhost:8080/actuator/metrics
+```
